@@ -27,21 +27,25 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      await signInWithEmailAndPassword(auth, email, password);
-      
-      toast({
-        title: "Login Successful",
-        description: `Welcome back! Redirecting you now...`,
-      });
-      
-      router.push('/dashboard');
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const userDocRef = doc(db, 'users', userCredential.user.uid);
+      const userDocSnap = await getDoc(userDocRef);
+
+      if (userDocSnap.exists() && userDocSnap.data().role === 'admin') {
+        router.push('/admin');
+      } else {
+        router.push('/dashboard');
+      }
 
     } catch (error: any) {
       // ONE-TIME TEMPORARY ADMIN CREATION
       if (error.code === 'auth/user-not-found' && email === 'tempadmin@taliyo.com') {
         try {
+          // Create the temporary admin user
           const userCredential = await createUserWithEmailAndPassword(auth, email, password);
           const user = userCredential.user;
+
+          // Set display name and database record
           await updateProfile(user, { displayName: 'Temporary Admin' });
           await setDoc(doc(db, 'users', user.uid), {
             name: 'Temporary Admin',
@@ -49,7 +53,12 @@ export default function LoginPage() {
             role: 'admin',
             avatar: `https://picsum.photos/seed/${user.email}/100/100`,
           });
-          toast({ title: "Temporary Admin Created", description: "Please log in again with the same credentials." });
+          
+          toast({ title: "Temporary Admin Created", description: "Redirecting to admin panel..." });
+          
+          // Redirect to admin panel immediately after creation
+          router.push('/admin');
+
         } catch (creationError: any) {
           toast({ variant: 'destructive', title: 'Setup Failed', description: creationError.message });
         }
@@ -58,7 +67,7 @@ export default function LoginPage() {
          toast({
             variant: 'destructive',
             title: 'Login Failed',
-            description: error.message || 'Please check your credentials and try again.',
+            description: "Invalid credentials. Please check your email and password.",
          });
       }
     } finally {
