@@ -40,6 +40,7 @@ export default function DashboardPage() {
   const [resources, setResources] = useState<Resource[]>([]);
   const [dailyLogs, setDailyLogs] = useState<DailyLog[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isCheckingRole, setIsCheckingRole] = useState(true);
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(async (currentUser) => {
@@ -57,10 +58,10 @@ export default function DashboardPage() {
               // If user is an admin, redirect them to the admin panel
               if (empData.role === 'admin') {
                   router.push('/admin');
-                  // No need to fetch employee data, just exit
-                  return; 
+                  return; // Exit early, no need to fetch employee data
               }
 
+              // If we reach here, user is an employee
               setEmployeeData(empData);
               
               // Log the visitor session for employees
@@ -84,44 +85,57 @@ export default function DashboardPage() {
               // Reverse to show oldest first on the chart
               setDailyLogs(logsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as DailyLog)).reverse());
           } else {
-            // If user doc doesn't exist, they can't be an employee
+             // If user doc doesn't exist, they aren't authorized
              router.push('/');
              return;
           }
 
-          // Fetch resources for all users
+          // Fetch resources (for all roles)
           const resourcesCollection = collection(db, "resources");
           const resourcesSnapshot = await getDocs(resourcesCollection);
           setResources(resourcesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Resource)));
 
         } catch (error) {
             console.error("Failed to fetch dashboard data:", error);
+            // On error, redirect to login as a fallback
+            router.push('/');
         } finally {
+            // Finished checking role and fetching data
             setLoading(false);
+            setIsCheckingRole(false);
         }
 
       } else {
+        // No user, redirect to login
         router.push('/');
         setLoading(false);
+        setIsCheckingRole(false);
       }
     });
 
     return () => unsubscribe();
   }, [router]);
 
-  if (loading || !user || !employeeData) {
+  // This loading state covers the initial role check and potential redirect.
+  if (isCheckingRole || loading) {
     return (
       <div className="flex min-h-screen w-full flex-col items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        <p className="mt-4 text-muted-foreground">Loading Dashboard...</p>
+        <p className="mt-4 text-muted-foreground">Verifying Access...</p>
       </div>
     );
   }
+
+  // If we've finished loading and role checking, and we still don't have employee data,
+  // it means we've redirected or are about to, so don't render the dashboard.
+  if (!employeeData) {
+      return null;
+  }
   
   const currentUser = {
-    name: user.displayName || employeeData.name,
-    email: user.email || "",
-    avatar: user.photoURL || employeeData.avatar || `https://picsum.photos/seed/${user.email}/100/100`,
+    name: user?.displayName || employeeData.name,
+    email: user?.email || "",
+    avatar: user?.photoURL || employeeData.avatar || `https://picsum.photos/seed/${user?.email}/100/100`,
   };
 
   return (

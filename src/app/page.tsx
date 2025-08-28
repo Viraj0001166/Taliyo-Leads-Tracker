@@ -4,7 +4,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { signInWithEmailAndPassword } from 'firebase/auth';
-import { auth, db } from '@/lib/firebase';
+import { auth } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -13,7 +13,6 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { doc, getDoc } from 'firebase/firestore';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -27,24 +26,15 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      const user = userCredential.user;
-
-      // Check the user's role from Firestore to determine where to redirect.
-      const userDocRef = doc(db, "users", user.uid);
-      const userDoc = await getDoc(userDocRef);
-      
-      let destination = '/dashboard'; // Default to employee dashboard
-      if (userDoc.exists() && userDoc.data().role === 'admin') {
-          destination = '/admin'; // Set to admin panel if role is 'admin'
-      }
+      await signInWithEmailAndPassword(auth, email, password);
       
       toast({
         title: "Login Successful",
         description: `Welcome back! Redirecting you now...`,
       });
       
-      router.push(destination);
+      // Always redirect to the dashboard. The dashboard page will handle role-based redirection.
+      router.push('/dashboard');
 
     } catch (error: any) {
       console.error("Firebase Auth Error:", error);
