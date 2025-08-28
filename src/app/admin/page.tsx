@@ -8,11 +8,12 @@ import { Leaderboard } from "@/components/admin/leaderboard";
 import { TaskAssignmentForm } from "@/components/admin/task-assignment-form";
 import { BroadcastForm } from "@/components/admin/broadcast-form";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, Trophy, ClipboardEdit, Loader2 } from "lucide-react";
+import { Users, Trophy, ClipboardEdit, Loader2, UserPlus } from "lucide-react";
 import { auth } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import type { User } from 'firebase/auth';
+import { AddUserForm } from "@/components/admin/add-user-form";
 
 export default function AdminPage() {
   const router = useRouter();
@@ -22,25 +23,20 @@ export default function AdminPage() {
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((currentUser) => {
       if (currentUser) {
-        // User is signed in.
         if (currentUser.email === 'taliyotechnologies@gmail.com') {
           setUser(currentUser);
+          setLoading(false);
         } else {
-          // If a non-admin user tries to access, redirect them.
           router.push('/dashboard');
         }
       } else {
-        // No user is signed in, redirect to login page.
         router.push('/');
       }
-      setLoading(false);
     });
-
     return () => unsubscribe();
   }, [router]);
 
-
-  if (loading || !user) {
+  if (loading) {
     return (
       <div className="flex min-h-screen w-full flex-col items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -49,10 +45,14 @@ export default function AdminPage() {
     );
   }
 
+  if (!user) {
+    return null; 
+  }
+
   const currentUser = {
-    name: user?.displayName || "Admin",
-    email: user?.email || "",
-    avatar: user?.photoURL || "https://picsum.photos/id/1/100/100",
+    name: user.displayName || "Admin",
+    email: user.email || "",
+    avatar: user.photoURL || `https://picsum.photos/seed/${user.email}/100/100`,
   };
 
   return (
@@ -60,7 +60,7 @@ export default function AdminPage() {
       <PageHeader title="Admin Panel" user={currentUser} />
       <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
         <Tabs defaultValue="performance" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="performance">
               <Users className="mr-2 h-4 w-4" />
               Employee Performance
@@ -72,6 +72,10 @@ export default function AdminPage() {
             <TabsTrigger value="tasks">
               <ClipboardEdit className="mr-2 h-4 w-4" />
               Task Management
+            </TabsTrigger>
+            <TabsTrigger value="users">
+              <UserPlus className="mr-2 h-4 w-4" />
+              User Management
             </TabsTrigger>
           </TabsList>
 
@@ -102,12 +106,25 @@ export default function AdminPage() {
                   <CardDescription>
                     Send a message or notification to all employees at once.
                   </CardDescription>
-                </CardHeader>
+                </Header>
                 <CardContent>
                   <BroadcastForm />
                 </CardContent>
               </Card>
             </div>
+          </TabsContent>
+          <TabsContent value="users" className="mt-4">
+             <Card>
+                <CardHeader>
+                  <CardTitle>Add New User</CardTitle>
+                  <CardDescription>
+                    Create a new employee or admin account.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <AddUserForm />
+                </CardContent>
+              </Card>
           </TabsContent>
         </Tabs>
       </main>
