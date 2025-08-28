@@ -2,68 +2,56 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // Helper function to check if the user is an admin
+    
+    function isAuth() {
+      return request.auth != null;
+    }
+    
     function isAdmin() {
-      return exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      return isAuth() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
-    // Helper function to check if the user is a logged-in employee or admin
-    function isEmployeeOrAdmin() {
-      return request.auth != null && exists(/databases/$(database)/documents/users/$(request.auth.uid));
-    }
-
-    // Users collection can be read by any authenticated user (for directories),
-    // but only the user themselves or an admin can update it.
-    // Admins can create new user documents.
+    // Users can read any profile (for directory), but only update their own. Admins can do anything.
     match /users/{userId} {
-      allow read: if isEmployeeOrAdmin();
-      allow create: if isAdmin();
-      allow update: if request.auth.uid == userId || isAdmin();
-      allow delete: if isAdmin();
+      allow read: if isAuth();
+      allow write: if isAuth() && (request.auth.uid == userId || isAdmin());
     }
 
-    // Daily logs can be created by any employee.
-    // Reading/updating/deleting logs might be restricted in the future, but is open for now.
+    // Employees can create their own logs. Admins can read any log. Employees can read their own.
     match /dailyLogs/{logId} {
-      allow read, write: if isEmployeeOrAdmin();
+      allow create: if isAuth();
+      allow read: if isAuth() && (isAdmin() || request.auth.uid == resource.data.employeeId);
     }
 
-    // Tasks can be read and updated by any employee (to check them off).
-    // Only admins can create or delete tasks.
-    match /tasks/{taskId} {
-      allow read, update: if isEmployeeOrAmdin();
-      allow create, delete: if isAdmin();
-    }
-    
-    // Fake employees can be read by any authenticated user.
-    // Only admins can create, update or delete them.
-    match /fakeEmployees/{employeeId} {
-      allow read: if isEmployeeOrAdmin();
-      allow create, update, delete: if isAdmin();
-    }
-
-    // Resources can be read by any employee.
-    // Only admins can create, update, or delete them.
-    match /resources/{resourceId} {
-      allow read: if isEmployeeOrAdmin();
-      allow create, update, delete: if isAdmin();
-    }
-    
-    // Visitor logs can be created by any employee upon login.
-    // Only admins should be able to read all logs.
+    // Employees can create their own visitor logs. Admins can read any log.
     match /visitorLogs/{logId} {
-       allow create: if isEmployeeOrAdmin();
-       allow read: if isAdmin();
-       allow update, delete: if false; // No one can update or delete
+      allow create: if isAuth();
+      allow read: if isAuth() && isAdmin();
     }
 
-    // The single 'latest' announcement document can be read by any employee.
-    // Only admins can update it.
-    match /announcements/latest {
-        allow read: if isEmployeeOrAdmin();
+    // Admins can create tasks. Employees can read/update their own tasks.
+    match /tasks/{taskId} {
+      allow read: if isAuth();
+      allow create: if isAdmin();
+      allow update: if isAuth();
+    }
+
+    // Admins can create/delete resources. All authenticated users can read them.
+    match /resources/{resourceId} {
+      allow read: if isAuth();
+      allow write, delete: if isAdmin();
+    }
+    
+    // Admins can write announcements. All authenticated users can read them.
+    match /announcements/{announcementId} {
+        allow read: if isAuth();
         allow write: if isAdmin();
+    }
+
+    // Admins can manage fake employees. All authenticated users can read them.
+    match /fakeEmployees/{employeeId} {
+        allow read: if isAuth();
+        allow write, delete: if isAdmin();
     }
   }
 }
