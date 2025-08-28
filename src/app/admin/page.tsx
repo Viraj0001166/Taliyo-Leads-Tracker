@@ -39,17 +39,15 @@ export default function AdminPage() {
           if (userDocSnapshot.exists() && userDocSnapshot.data().role === 'admin') {
             setIsAuthorized(true);
           } else {
-            router.push('/dashboard');
+            router.push('/employee/login');
           }
         } catch (error) {
             console.error("Error checking admin status:", error);
-            router.push('/dashboard');
+            router.push('/employee/login');
         }
       } else {
-        router.push('/');
+        router.push('/admin/login');
       }
-      // Keep loading until authorization status is confirmed.
-      // setLoading(false);
     });
 
     return () => unsubscribe();
@@ -58,13 +56,12 @@ export default function AdminPage() {
   useEffect(() => {
     if (!isAuthorized) return;
     
-    // Once authorized, start fetching data and set loading to false.
     const usersCollection = collection(db, "users");
     const qUsers = query(usersCollection, where("role", "==", "employee"));
     const unsubscribeEmployees = onSnapshot(qUsers, (snapshot) => {
       const employeeList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Employee));
       setEmployees(employeeList);
-      setLoading(false); // Stop loading after we have employees
+      setLoading(false);
     }, (error) => {
       console.error("Error fetching users in real-time:", error);
       setLoading(false);

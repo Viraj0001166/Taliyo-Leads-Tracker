@@ -27,8 +27,14 @@ export default function SettingsPage() {
         // Check user role
         const userDocRef = doc(db, 'users', currentUser.uid);
         const userDocSnap = await getDoc(userDocRef);
-        if (userDocSnap.exists() && userDocSnap.data().role === 'admin') {
-          setIsAdmin(true);
+        if (userDocSnap.exists()) {
+           if (userDocSnap.data().role === 'admin') {
+            setIsAdmin(true);
+           }
+        } else {
+          // If no user doc, they shouldn't be here
+          await auth.signOut();
+          router.push('/');
         }
       } else {
         router.push('/');

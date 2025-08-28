@@ -1,27 +1,20 @@
 
-"use client";
+'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile, onAuthStateChanged } from 'firebase/auth';
+import { onAuthStateChanged } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { useToast } from '@/hooks/use-toast';
-import { Loader2 } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Loader2, Shield, User } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 
-export default function LoginPage() {
+export default function LandingPage() {
   const router = useRouter();
-  const { toast } = useToast();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [authLoading, setAuthLoading] = useState(true);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -30,122 +23,76 @@ export default function LoginPage() {
           const userDocRef = doc(db, 'users', user.uid);
           const userDocSnap = await getDoc(userDocRef);
           if (userDocSnap.exists() && userDocSnap.data().role === 'admin') {
-              router.push('/admin');
+            router.push('/admin');
           } else {
-              router.push('/dashboard');
+            router.push('/dashboard');
           }
         } catch (error) {
-            console.error("Error fetching user role, redirecting to dashboard as default:", error);
-            router.push('/dashboard');
+          console.error("Error checking user role, redirecting to employee login:", error);
+          router.push('/employee/login');
         }
       } else {
-        setAuthLoading(false);
+        setLoading(false);
       }
     });
 
     return () => unsubscribe();
   }, [router]);
 
-
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-
-    try {
-      await signInWithEmailAndPassword(auth, email, password);
-      // The useEffect onAuthStateChanged will handle the redirect.
-      // We can show a toast here for immediate feedback.
-      toast({ title: "Login Successful", description: "Redirecting..." });
-    } catch (error: any) {
-      if (error.code === 'auth/user-not-found' && email.toLowerCase() === 'tempadmin@taliyo.com') {
-        try {
-          const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-          const user = userCredential.user;
-
-          await updateProfile(user, { displayName: 'Temporary Admin' });
-          await setDoc(doc(db, 'users', user.uid), {
-            name: 'Temporary Admin',
-            email: user.email,
-            role: 'admin',
-            avatar: `https://picsum.photos/seed/${user.email}/100/100`,
-          });
-          
-          toast({ title: "Temporary Admin Created", description: "Login successful. Redirecting..." });
-          // The onAuthStateChanged listener will now pick up this new user and redirect.
-          
-        } catch (creationError: any) {
-          toast({ variant: 'destructive', title: 'Setup Failed', description: creationError.message });
-        }
-      } else {
-         console.error("Firebase Auth Error:", error.code, error.message);
-         toast({
-            variant: 'destructive',
-            title: 'Login Failed',
-            description: "Invalid credentials. Please check your email and password.",
-         });
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  if (authLoading) {
-      return (
-        <div className="flex min-h-screen w-full flex-col items-center justify-center">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            <p className="mt-4 text-muted-foreground">Initializing...</p>
-        </div>
-      )
+  if (loading) {
+    return (
+      <div className="flex min-h-screen w-full flex-col items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <p className="mt-4 text-muted-foreground">Initializing...</p>
+      </div>
+    );
   }
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center bg-background p-8">
       <div className="flex flex-col items-center justify-center text-center mb-8">
         <div className="bg-primary text-primary-foreground p-2 rounded-full mb-4">
-          <Image src="https://placehold.co/48x48/3B82F6/FFFFFF/png?text=T" alt="Taliyo Lead Track Logo" width={48} height={48} className="rounded-full" data-ai-hint="logo company" />
+           <Image src="https://placehold.co/48x48/3B82F6/FFFFFF/png?text=T" alt="Taliyo Lead Track Logo" width={48} height={48} className="rounded-full" data-ai-hint="logo company" />
         </div>
-        <h1 className="text-4xl font-bold text-foreground tracking-tighter">Taliyo Lead Track</h1>
-        <p className="text-muted-foreground mt-2 max-w-md">Streamline your team's performance tracking. Log daily tasks, view progress, and stay ahead.</p>
+        <h1 className="text-4xl font-bold text-foreground tracking-tighter">Welcome to Taliyo Lead Track</h1>
+        <p className="text-muted-foreground mt-2 max-w-md">Please select your login portal.</p>
       </div>
 
-      <Card className="w-full max-w-sm shadow-xl">
-        <CardHeader>
-          <CardTitle>Welcome Back!</CardTitle>
-          <CardDescription>Enter your credentials to access your dashboard.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleLogin} className="grid gap-4">
-            <div className="grid gap-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="m@example.com"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                autoComplete="email"
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="password">Password</Label>
-              <Input 
-                id="password" 
-                type="password" 
-                required 
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                autoComplete="current-password"
-              />
-            </div>
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              Login
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
-      <footer className="mt-8 text-center text-sm text-muted-foreground">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 w-full max-w-2xl">
+          <Card className="shadow-xl hover:shadow-2xl transition-shadow">
+            <CardHeader className="items-center text-center">
+              <div className="p-3 rounded-full bg-primary/10 border border-primary/20 mb-2">
+                <User className="h-8 w-8 text-primary" />
+              </div>
+              <CardTitle>Employee Login</CardTitle>
+              <CardDescription>Access your personal dashboard to log tasks and view progress.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button asChild className="w-full">
+                <Link href="/employee/login">
+                  Proceed to Employee Login
+                </Link>
+              </Button>
+            </CardContent>
+          </Card>
+          <Card className="shadow-xl hover:shadow-2xl transition-shadow">
+            <CardHeader className="items-center text-center">
+               <div className="p-3 rounded-full bg-primary/10 border border-primary/20 mb-2">
+                <Shield className="h-8 w-8 text-primary" />
+              </div>
+              <CardTitle>Admin Login</CardTitle>
+              <CardDescription>Access the admin panel to manage users and view analytics.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button asChild className="w-full">
+                 <Link href="/admin/login">
+                  Proceed to Admin Login
+                </Link>
+              </Button>
+            </CardContent>
+          </Card>
+      </div>
+       <footer className="mt-8 text-center text-sm text-muted-foreground">
         © {new Date().getFullYear()} Taliyo Lead Track. All rights reserved.
         <br />
         <Link href="https://taliyotechnologies.com" target="_blank" rel="noopener noreferrer" className="underline hover:text-primary">
