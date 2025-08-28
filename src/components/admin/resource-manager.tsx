@@ -1,15 +1,15 @@
 
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from '@/components/ui/button';
-import { Trash2 } from 'lucide-react';
+import { Loader2, Trash2 } from 'lucide-react';
 import type { Resource } from "@/lib/types";
 import { AddResourceForm } from './add-resource-form';
 import { db } from '@/lib/firebase';
-import { doc, deleteDoc } from 'firebase/firestore';
+import { doc, deleteDoc, collection, writeBatch, getDocs } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import {
   AlertDialog,
@@ -22,6 +22,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { initialResourcesData } from '@/lib/data';
 
 interface ResourceManagerProps {
   initialResources: Resource[];
@@ -30,15 +31,20 @@ interface ResourceManagerProps {
 export function ResourceManager({ initialResources }: ResourceManagerProps) {
   const { toast } = useToast();
   const [resources, setResources] = useState<Resource[]>(initialResources);
+  const [isSeeding, setIsSeeding] = useState(false);
+
+  useEffect(() => {
+    setResources(initialResources);
+  }, [initialResources]);
 
   const handleResourceAdded = () => {
-    // The parent component will re-fetch and update props
+    // The parent component's onSnapshot listener will handle the update
   };
   
   const handleDelete = async (resourceId: string) => {
     try {
       await deleteDoc(doc(db, "resources", resourceId));
-      setResources(prev => prev.filter(r => r.id !== resourceId));
+      // The onSnapshot listener will update the state automatically
       toast({
         title: "Resource Deleted",
         description: "The resource has been removed successfully.",
@@ -50,6 +56,41 @@ export function ResourceManager({ initialResources }: ResourceManagerProps) {
         title: "Deletion Failed",
         description: "Could not delete the resource. Please try again.",
       });
+    }
+  };
+
+  const seedInitialData = async () => {
+    setIsSeeding(true);
+    try {
+        const resourcesCollection = collection(db, "resources");
+        const snapshot = await getDocs(resourcesCollection);
+        if (snapshot.empty) {
+            const batch = writeBatch(db);
+            initialResourcesData.forEach(resource => {
+                const docRef = doc(collection(db, "resources"));
+                batch.set(docRef, resource);
+            });
+            await batch.commit();
+            toast({
+                title: "Initial Resources Added!",
+                description: "Your resource library has been populated with default templates."
+            });
+        } else {
+             toast({
+                title: "Database Not Empty",
+                description: "Initial resources were not added because the database already contains data.",
+                variant: "default"
+            });
+        }
+    } catch(error) {
+        console.error("Error seeding data:", error);
+        toast({
+            variant: "destructive",
+            title: "Seeding Failed",
+            description: "Could not add initial resources.",
+        });
+    } finally {
+        setIsSeeding(false);
     }
   };
 
@@ -69,8 +110,16 @@ export function ResourceManager({ initialResources }: ResourceManagerProps) {
       <div className="md:col-span-2">
         <Card>
           <CardHeader>
-            <CardTitle>Existing Resources</CardTitle>
-            <CardDescription>A list of all currently available resources.</CardDescription>
+            <div className="flex justify-between items-start">
+              <div>
+                <CardTitle>Existing Resources</CardTitle>
+                <CardDescription>A list of all currently available resources.</CardDescription>
+              </div>
+               <Button onClick={seedInitialData} disabled={isSeeding} variant="outline" size="sm">
+                {isSeeding && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Seed Initial Data
+              </Button>
+            </div>
           </CardHeader>
           <CardContent>
             <Table>
@@ -82,7 +131,7 @@ export function ResourceManager({ initialResources }: ResourceManagerProps) {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {initialResources.map((resource) => (
+                {resources.map((resource) => (
                   <TableRow key={resource.id}>
                     <TableCell className="font-medium">{resource.category}</TableCell>
                     <TableCell>{resource.title}</TableCell>
@@ -112,6 +161,13 @@ export function ResourceManager({ initialResources }: ResourceManagerProps) {
                     </TableCell>
                   </TableRow>
                 ))}
+                {resources.length === 0 && (
+                    <TableRow>
+                        <TableCell colSpan={3} className="text-center text-muted-foreground h-24">
+                            No resources found. Click "Seed Initial Data" to add default templates.
+                        </TableCell>
+                    </TableRow>
+                )}
               </TableBody>
             </Table>
           </CardContent>

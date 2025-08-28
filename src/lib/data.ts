@@ -36,6 +36,36 @@ export const dailyLogs: DailyLog[] = [
 
 export const assignedTasks: AssignedTask[] = []; // Fetched from Firestore now
 
+export const initialResourcesData: Omit<Resource, 'id'>[] = [
+    // Email Templates
+    { category: "Email Templates", title: "Cold Outreach", content: "Hi [Name], I saw..." },
+    { category: "Email Templates", title: "Follow-up Emails", content: "Hi [Name], just following up on..." },
+    { category: "Email Templates", title: "Meeting Request", content: "Hi [Name], are you available for a brief chat..." },
+    { category: "Email Templates", title: "Service Pitch", content: "Hi [Name], we offer services that can..." },
+    // Lead Generation Tools & Links
+    { category: "Lead Generation Tools & Links", title: "LinkedIn Filters (saved searches)", content: "Link to saved search: [URL]" },
+    { category: "Lead Generation Tools & Links", title: "Apollo.io free sign-up link", content: "https://www.apollo.io/" },
+    { category: "Lead Generation Tools & Links", title: "Hunter.io free email extractor link", content: "https://hunter.io/" },
+    { category: "Lead Generation Tools & Links", title: "Crunchbase free directory", content: "https://www.crunchbase.com/" },
+    { category: "Lead Generation Tools & Links", title: "Google Search Hacks", content: "site:linkedin.com/in/ \"[Job Title]\" \"[Industry]\"" },
+    // Scripts
+    { category: "Scripts", title: "Cold Calling Script", content: "Hello, am I speaking with [Name]?" },
+    { category: "Scripts", title: "WhatsApp Outreach Script", content: "Hi [Name], I got your number from..." },
+    { category: "Scripts", title: "LinkedIn Connection Request Script", content: "Hi [Name], I'd like to connect. I see we're both in the [Industry] space." },
+    { category: "Scripts", title: "Demo Pitch Script", content: "In this demo, I'll walk you through..." },
+    // Daily Task Sheet / Workflow
+    { category: "Daily Task Sheet / Workflow", title: "Excel / Google Sheet task tracker", content: "Link to template: [URL]" },
+    { category: "Daily Task Sheet / Workflow", title: "Daily Leads Target: 50 connections, 20 emails, 5 replies", content: "A reminder of the daily targets to hit." },
+    // Training & Tutorials
+    { category: "Training & Tutorials", title: "How to use LinkedIn Search Filters (Step by Step PDF)", content: "Link to PDF: [URL]" },
+    { category: "Training & Tutorials", title: "How to extract emails using Hunter.io", content: "Link to tutorial: [URL]" },
+    { category: "Training & Tutorials", title: "How to qualify a lead", content: "A qualified lead is someone who..." },
+    // Motivation & Guidelines
+    { category: "Motivation & Guidelines", title: "Best Practices in Sales", content: "1. Always listen more than you talk. 2. ..." },
+    { category: "Motivation & Guidelines", title: "Do’s & Don’ts in Client Outreach", content: "DO: Personalize every message. DON'T: Use a generic template without changes." },
+    { category: "Motivation & Guidelines", title: "Daily Motivation Quotes / Small Video Links", content: "Link to today's quote: [URL]" },
+];
+
 export const resources: Resource[] = []; // Fetched from Firestore now
 
 export const performanceData: PerformanceData[] = []; // Calculated or fetched from Firestore now
