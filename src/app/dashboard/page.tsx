@@ -10,7 +10,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import type { User as FirebaseUser } from 'firebase/auth';
 import { Loader2 } from "lucide-react";
-import { collection, query, where, getDocs, doc, getDoc, limit, addDoc, serverTimestamp, orderBy } from "firebase/firestore";
+import { collection, query, where, getDocs, doc, getDoc, limit, addDoc, serverTimestamp, orderBy, onSnapshot } from "firebase/firestore";
 import type { Employee, AssignedTask, Resource, DailyLog } from "@/lib/types";
 
 async function logVisitor(employee: Employee) {
@@ -40,96 +40,79 @@ export default function DashboardPage() {
   const [resources, setResources] = useState<Resource[]>([]);
   const [dailyLogs, setDailyLogs] = useState<DailyLog[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isCheckingRole, setIsCheckingRole] = useState(true);
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(async (currentUser) => {
       if (currentUser) {
         setUser(currentUser);
         
-        try {
-          // Fetch employee data and check role
-          const userDocRef = doc(db, 'users', currentUser.uid);
-          const userDocSnap = await getDoc(userDocRef);
+        const userDocRef = doc(db, 'users', currentUser.uid);
+        const userDocSnap = await getDoc(userDocRef);
 
-          if (userDocSnap.exists()) {
-              const empData = { id: userDocSnap.id, ...userDocSnap.data() } as Employee;
-              
-              // If user is an admin, redirect them to the admin panel
-              if (empData.role === 'admin') {
-                  router.push('/admin');
-                  return; // Exit early, no need to fetch employee data
-              }
+        if (userDocSnap.exists()) {
+            const empData = { id: userDocSnap.id, ...userDocSnap.data() } as Employee;
+            
+            if (empData.role === 'admin') {
+                router.push('/admin');
+                return;
+            }
 
-              // If we reach here, user is an employee
-              setEmployeeData(empData);
-              
-              // Log the visitor session for employees
-              logVisitor(empData);
-
-              // Fetch assigned tasks
-              const tasksCollection = collection(db, "tasks");
-              const tasksQuery = query(tasksCollection, where("employeeId", "==", empData.id));
-              const tasksSnapshot = await getDocs(tasksQuery);
-              setAssignedTasks(tasksSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AssignedTask)));
-
-              // Fetch daily logs for the last 7 days for the chart
-              const logsCollection = collection(db, "dailyLogs");
-              const logsQuery = query(
-                logsCollection, 
-                where("employeeId", "==", empData.id),
-                orderBy("date", "desc"), 
-                limit(7)
-              );
-              const logsSnapshot = await getDocs(logsQuery);
-              // Reverse to show oldest first on the chart
-              setDailyLogs(logsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as DailyLog)).reverse());
-          } else {
-             // If user doc doesn't exist, they aren't authorized
-             router.push('/');
-             return;
-          }
-
-          // Fetch resources (for all roles)
-          const resourcesCollection = collection(db, "resources");
-          const resourcesSnapshot = await getDocs(resourcesCollection);
-          setResources(resourcesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Resource)));
-
-        } catch (error) {
-            console.error("Failed to fetch dashboard data:", error);
-            // On error, redirect to login as a fallback
-            router.push('/');
-        } finally {
-            // Finished checking role and fetching data
-            setLoading(false);
-            setIsCheckingRole(false);
+            setEmployeeData(empData);
+            logVisitor(empData);
+        } else {
+           router.push('/');
         }
-
       } else {
-        // No user, redirect to login
         router.push('/');
-        setLoading(false);
-        setIsCheckingRole(false);
       }
+      setLoading(false);
     });
 
     return () => unsubscribe();
   }, [router]);
 
-  // This loading state covers the initial role check and potential redirect.
-  if (isCheckingRole || loading) {
+  useEffect(() => {
+    if (!employeeData) return;
+
+    // Listener for tasks
+    const tasksCollection = collection(db, "tasks");
+    const tasksQuery = query(tasksCollection, where("employeeId", "==", employeeData.id));
+    const unsubscribeTasks = onSnapshot(tasksQuery, (snapshot) => {
+        setAssignedTasks(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AssignedTask)));
+    });
+
+    // Listener for daily logs
+    const logsCollection = collection(db, "dailyLogs");
+    const logsQuery = query(
+      logsCollection, 
+      where("employeeId", "==", employeeData.id),
+      orderBy("date", "desc"), 
+      limit(7)
+    );
+    const unsubscribeLogs = onSnapshot(logsQuery, (snapshot) => {
+        setDailyLogs(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as DailyLog)).reverse());
+    });
+
+    // Listener for resources
+    const resourcesCollection = collection(db, "resources");
+    const unsubscribeResources = onSnapshot(resourcesCollection, (snapshot) => {
+        setResources(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Resource)));
+    });
+
+    return () => {
+        unsubscribeTasks();
+        unsubscribeLogs();
+        unsubscribeResources();
+    };
+  }, [employeeData]);
+
+  if (loading || !employeeData) {
     return (
       <div className="flex min-h-screen w-full flex-col items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        <p className="mt-4 text-muted-foreground">Verifying Access...</p>
+        <p className="mt-4 text-muted-foreground">Loading Dashboard...</p>
       </div>
     );
-  }
-
-  // If we've finished loading and role checking, and we still don't have employee data,
-  // it means we've redirected or are about to, so don't render the dashboard.
-  if (!employeeData) {
-      return null;
   }
   
   const currentUser = {
