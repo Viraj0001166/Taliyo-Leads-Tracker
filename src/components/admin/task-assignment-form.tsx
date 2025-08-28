@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import type { Employee } from "@/lib/types";
-import { Send } from "lucide-react";
+import { Send, Loader2 } from "lucide-react";
 import { useState } from "react";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { db, auth } from "@/lib/firebase";
@@ -94,7 +94,7 @@ export function TaskAssignmentForm({ employees }: TaskAssignmentFormProps) {
         />
       </div>
       <Button type="submit" className="w-full" disabled={loading}>
-        <Send className="mr-2 h-4 w-4" />
+        {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
         {loading ? "Assigning..." : "Assign Task"}
       </Button>
     </form>

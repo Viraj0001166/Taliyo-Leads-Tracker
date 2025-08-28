@@ -57,3 +57,13 @@ export interface VisitorLog {
   ipAddress: string;
   userAgent: string;
 }
+
+export interface Announcement {
+    id: string;
+    message: string;
+    updatedAt: {
+        seconds: number;
+        nanoseconds: number;
+    };
+    updatedBy: string;
+}

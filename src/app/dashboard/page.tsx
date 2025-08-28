@@ -5,14 +5,14 @@ import { AssignedTasks } from "@/components/dashboard/assigned-tasks";
 import { DailyTaskForm } from "@/components/dashboard/daily-task-form";
 import { Resources } from "@/components/dashboard/resources";
 import { WeeklySummary } from "@/components/dashboard/weekly-summary";
-import { TeamDirectory } from "@/components/dashboard/team-directory";
+import { Announcements } from "@/components/dashboard/announcements";
 import { auth, db } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import type { User as FirebaseUser } from 'firebase/auth';
 import { Loader2 } from "lucide-react";
 import { collection, query, where, onSnapshot, doc, getDoc, limit, addDoc, serverTimestamp, orderBy } from "firebase/firestore";
-import type { Employee, AssignedTask, Resource, DailyLog } from "@/lib/types";
+import type { Employee, AssignedTask, Resource, DailyLog, Announcement } from "@/lib/types";
 
 async function logVisitor(employee: Employee) {
   try {
@@ -39,7 +39,7 @@ export default function DashboardPage() {
   const [assignedTasks, setAssignedTasks] = useState<AssignedTask[]>([]);
   const [resources, setResources] = useState<Resource[]>([]);
   const [dailyLogs, setDailyLogs] = useState<DailyLog[]>([]);
-  const [allEmployees, setAllEmployees] = useState<Employee[]>([]);
+  const [announcement, setAnnouncement] = useState<Announcement | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -77,10 +77,11 @@ export default function DashboardPage() {
     if (!employeeData) return;
 
     // Listener for all employees for the directory
-    const usersCollection = collection(db, "users");
-    const allUsersQuery = query(usersCollection, where("role", "==", "employee"));
-    const unsubscribeAllEmployees = onSnapshot(allUsersQuery, (snapshot) => {
-        setAllEmployees(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Employee)));
+    const announcementRef = doc(db, "announcements", "latest");
+    const unsubscribeAnnouncement = onSnapshot(announcementRef, (doc) => {
+        if (doc.exists()) {
+            setAnnouncement({ id: doc.id, ...doc.data()} as Announcement);
+        }
     });
 
     // Set up real-time listeners for employee-specific data
@@ -120,7 +121,7 @@ export default function DashboardPage() {
         unsubscribeTasks();
         unsubscribeLogs();
         unsubscribeResources();
-        unsubscribeAllEmployees();
+        unsubscribeAnnouncement();
     };
   }, [employeeData]);
 
@@ -150,14 +151,14 @@ export default function DashboardPage() {
           <div className="lg:col-span-2">
             <WeeklySummary data={dailyLogs} />
           </div>
+          <div className="lg:col-span-4">
+             <Announcements announcement={announcement} />
+          </div>
           <div className="lg:col-span-2">
             <AssignedTasks tasks={assignedTasks} />
           </div>
           <div className="lg:col-span-2">
             <Resources resources={resources} />
-          </div>
-           <div className="lg:col-span-4">
-            <TeamDirectory employees={allEmployees} />
           </div>
         </div>
       </main>
