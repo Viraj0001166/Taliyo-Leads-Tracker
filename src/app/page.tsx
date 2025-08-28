@@ -57,7 +57,7 @@ export default function LoginPage() {
        toast({ title: "Login Successful", description: "Redirecting..." });
     } catch (error: any) {
       // ONE-TIME TEMPORARY ADMIN CREATION
-      if (error.code === 'auth/user-not-found' && email === 'tempadmin@taliyo.com') {
+      if (error.code === 'auth/user-not-found' && email.toLowerCase() === 'tempadmin@taliyo.com') {
         try {
           // Create the temporary admin user
           const userCredential = await createUserWithEmailAndPassword(auth, email, password);

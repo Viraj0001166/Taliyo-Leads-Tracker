@@ -10,7 +10,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import type { User as FirebaseUser } from 'firebase/auth';
 import { Loader2 } from "lucide-react";
-import { collection, query, where, getDocs, doc, getDoc, limit, addDoc, serverTimestamp, orderBy, onSnapshot } from "firebase/firestore";
+import { collection, query, where, onSnapshot, doc, getDoc, limit, addDoc, serverTimestamp, orderBy } from "firebase/firestore";
 import type { Employee, AssignedTask, Resource, DailyLog } from "@/lib/types";
 
 async function logVisitor(employee: Employee) {
@@ -58,8 +58,10 @@ export default function DashboardPage() {
 
             setEmployeeData(empData);
             await logVisitor(empData);
-            setLoading(false);
+            // Data fetching will be triggered by the second useEffect
         } else {
+           // This case might happen if a user is deleted from Firestore but not Auth.
+           // Or during initial user creation before Firestore doc is set.
            router.push('/');
         }
       } else {
@@ -73,6 +75,7 @@ export default function DashboardPage() {
   useEffect(() => {
     if (!employeeData) return;
 
+    // Set up real-time listeners for employee-specific data
     const tasksCollection = collection(db, "tasks");
     const tasksQuery = query(tasksCollection, where("employeeId", "==", employeeData.id));
     const unsubscribeTasks = onSnapshot(tasksQuery, (snapshot) => {
@@ -94,6 +97,8 @@ export default function DashboardPage() {
     const unsubscribeResources = onSnapshot(resourcesCollection, (snapshot) => {
         setResources(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Resource)));
     });
+
+    setLoading(false); // Stop loading now that we have data and listeners are set up
 
     return () => {
         unsubscribeTasks();
