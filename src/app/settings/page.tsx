@@ -10,13 +10,13 @@ import { Switch } from "@/components/ui/switch";
 import { auth, db } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import type { User } from 'firebase/auth';
+import type { User as FirebaseUser } from 'firebase/auth';
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { doc, getDoc } from 'firebase/firestore';
 
 export default function SettingsPage() {
   const router = useRouter();
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<FirebaseUser | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -81,7 +81,7 @@ export default function SettingsPage() {
                                 Enable or disable the dark theme for the application.
                             </span>
                             </Label>
-                            <Switch id="dark-mode" />
+                            <Switch id="dark-mode" disabled />
                         </div>
                         <div className="flex items-center justify-between space-x-2">
                             <Label htmlFor="email-notifications" className="flex flex-col space-y-1">
@@ -90,7 +90,7 @@ export default function SettingsPage() {
                               Receive email notifications for important updates.
                             </span>
                             </Label>
-                            <Switch id="email-notifications" defaultChecked />
+                            <Switch id="email-notifications" defaultChecked disabled />
                         </div>
                     </CardContent>
                 </Card>
@@ -100,7 +100,7 @@ export default function SettingsPage() {
                         <CardDescription>These actions are irreversible. Please proceed with caution.</CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <Button variant="destructive">Delete Account</Button>
+                        <Button variant="destructive" disabled>Delete Account</Button>
                     </CardContent>
                 </Card>
             </div>

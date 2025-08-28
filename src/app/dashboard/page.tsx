@@ -62,6 +62,9 @@ export default function DashboardPage() {
         } else {
            // This case might happen if a user is deleted from Firestore but not Auth.
            // Or during initial user creation before Firestore doc is set.
+           // It can also happen if the user's record hasn't been created yet.
+           // Log out to be safe and redirect to login
+           await auth.signOut();
            router.push('/');
         }
       } else {

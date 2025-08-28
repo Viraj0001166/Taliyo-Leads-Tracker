@@ -12,15 +12,15 @@ import { useToast } from "@/hooks/use-toast";
 import { auth, db } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import type { User } from 'firebase/auth';
+import type { User as FirebaseUser } from 'firebase/auth';
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { updateProfile } from "firebase/auth";
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
 
 export default function ProfilePage() {
   const router = useRouter();
   const { toast } = useToast();
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<FirebaseUser | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
   const [displayName, setDisplayName] = useState('');
@@ -32,7 +32,6 @@ export default function ProfilePage() {
         setUser(currentUser);
         setDisplayName(currentUser.displayName || '');
         
-        // Check user role
         const userDocRef = doc(db, 'users', currentUser.uid);
         const userDocSnap = await getDoc(userDocRef);
         if (userDocSnap.exists() && userDocSnap.data().role === 'admin') {
@@ -49,16 +48,22 @@ export default function ProfilePage() {
 
   const handleProfileUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) return;
+    if (!user || !displayName) return;
     setIsUpdating(true);
     try {
       await updateProfile(user, { displayName });
+      
+      const userDocRef = doc(db, 'users', user.uid);
+      await updateDoc(userDocRef, { name: displayName });
+      
       toast({
         title: "Profile Updated",
         description: "Your display name has been updated successfully.",
       });
-      // Force a re-render to show updated name in header
-      setUser({...user});
+      // Create a new user object to trigger re-render in header
+      const updatedUser = { ...user, displayName };
+      setUser(updatedUser);
+
     } catch (error: any) {
       toast({
         variant: "destructive",
@@ -124,6 +129,7 @@ export default function ProfilePage() {
                       value={displayName}
                       onChange={(e) => setDisplayName(e.target.value)}
                       placeholder="Your full name"
+                      required
                     />
                   </div>
                   <div className="grid gap-2">

@@ -24,25 +24,25 @@ export default function LoginPage() {
   const [authLoading, setAuthLoading] = useState(true);
 
   useEffect(() => {
-    // If a user is already logged in, redirect them away from the login page.
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
-        // User is signed in, see docs for a list of available properties
-        // https://firebase.google.com/docs/reference/js/firebase.User
-        const userDocRef = doc(db, 'users', user.uid);
-        const userDocSnap = await getDoc(userDocRef);
-        if (userDocSnap.exists() && userDocSnap.data().role === 'admin') {
-            router.push('/admin');
-        } else {
+        try {
+          const userDocRef = doc(db, 'users', user.uid);
+          const userDocSnap = await getDoc(userDocRef);
+          if (userDocSnap.exists() && userDocSnap.data().role === 'admin') {
+              router.push('/admin');
+          } else {
+              router.push('/dashboard');
+          }
+        } catch (error) {
+            console.error("Error fetching user role, redirecting to dashboard as default:", error);
             router.push('/dashboard');
         }
       } else {
-        // User is signed out, so they can stay on the login page.
         setAuthLoading(false);
       }
     });
 
-    // Cleanup subscription on unmount
     return () => unsubscribe();
   }, [router]);
 
@@ -52,18 +52,16 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      // This just signs the user in. The useEffect handles the redirect.
       await signInWithEmailAndPassword(auth, email, password);
-       toast({ title: "Login Successful", description: "Redirecting..." });
+      // The useEffect onAuthStateChanged will handle the redirect.
+      // We can show a toast here for immediate feedback.
+      toast({ title: "Login Successful", description: "Redirecting..." });
     } catch (error: any) {
-      // ONE-TIME TEMPORARY ADMIN CREATION
       if (error.code === 'auth/user-not-found' && email.toLowerCase() === 'tempadmin@taliyo.com') {
         try {
-          // Create the temporary admin user
           const userCredential = await createUserWithEmailAndPassword(auth, email, password);
           const user = userCredential.user;
 
-          // Set display name and database record
           await updateProfile(user, { displayName: 'Temporary Admin' });
           await setDoc(doc(db, 'users', user.uid), {
             name: 'Temporary Admin',
@@ -72,14 +70,14 @@ export default function LoginPage() {
             avatar: `https://picsum.photos/seed/${user.email}/100/100`,
           });
           
-          toast({ title: "Temporary Admin Created", description: "Please log in with the temporary credentials." });
-          // Let the user log in again to trigger the auth state change.
+          toast({ title: "Temporary Admin Created", description: "Login successful. Redirecting..." });
+          // The onAuthStateChanged listener will now pick up this new user and redirect.
           
         } catch (creationError: any) {
           toast({ variant: 'destructive', title: 'Setup Failed', description: creationError.message });
         }
       } else {
-         console.error("Firebase Auth Error:", error);
+         console.error("Firebase Auth Error:", error.code, error.message);
          toast({
             variant: 'destructive',
             title: 'Login Failed',

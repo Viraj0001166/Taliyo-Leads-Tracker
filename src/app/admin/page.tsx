@@ -48,7 +48,8 @@ export default function AdminPage() {
       } else {
         router.push('/');
       }
-      setLoading(false);
+      // Keep loading until authorization status is confirmed.
+      // setLoading(false);
     });
 
     return () => unsubscribe();
@@ -57,13 +58,16 @@ export default function AdminPage() {
   useEffect(() => {
     if (!isAuthorized) return;
     
+    // Once authorized, start fetching data and set loading to false.
     const usersCollection = collection(db, "users");
     const qUsers = query(usersCollection, where("role", "==", "employee"));
     const unsubscribeEmployees = onSnapshot(qUsers, (snapshot) => {
       const employeeList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Employee));
       setEmployees(employeeList);
+      setLoading(false); // Stop loading after we have employees
     }, (error) => {
       console.error("Error fetching users in real-time:", error);
+      setLoading(false);
     });
 
     const resourcesCollection = collection(db, "resources");
@@ -82,7 +86,7 @@ export default function AdminPage() {
   }, [isAuthorized]);
 
   useEffect(() => {
-    if (employees.length === 0) return;
+    if (employees.length === 0 || !isAuthorized) return;
 
     const fetchPerformanceData = async () => {
         const perfDataPromises = employees.map(async (employee) => {
@@ -119,14 +123,23 @@ export default function AdminPage() {
 
     fetchPerformanceData();
 
-  }, [employees]);
+  }, [employees, isAuthorized]);
 
 
-  if (loading || !isAuthorized) {
+  if (loading) {
     return (
       <div className="flex min-h-screen w-full flex-col items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        <p className="mt-4 text-muted-foreground">{!isAuthorized && !loading ? 'Redirecting...' : 'Loading Admin Panel...'}</p>
+        <p className="mt-4 text-muted-foreground">Loading Admin Panel...</p>
+      </div>
+    );
+  }
+
+  if (!isAuthorized) {
+     return (
+      <div className="flex min-h-screen w-full flex-col items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <p className="mt-4 text-muted-foreground">Redirecting...</p>
       </div>
     );
   }
@@ -142,7 +155,7 @@ export default function AdminPage() {
       <PageHeader title="Admin Panel" user={currentUser} />
       <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
         <Tabs defaultValue="performance" className="w-full">
-          <TabsList className="grid w-full grid-cols-6">
+          <TabsList className="grid w-full grid-cols-1 md:grid-cols-2 lg:grid-cols-6">
             <TabsTrigger value="performance">
               <Users className="mr-2 h-4 w-4" />
               Employee Performance
