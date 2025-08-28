@@ -18,18 +18,18 @@ export default function AdminPage() {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isAuthorized, setIsAuthorized] = useState(false);
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((user) => {
       if (user) {
         if (user.email === 'taliyotechnologies@gmail.com') {
           setUser(user);
+          setIsAuthorized(true);
         } else {
-          // If a non-admin user is logged in, send them to their dashboard
           router.push('/dashboard');
         }
       } else {
-        // If no user is logged in, send them to the login page
         router.push('/');
       }
       setLoading(false);
@@ -39,7 +39,7 @@ export default function AdminPage() {
   }, [router]);
 
 
-  if (loading || !user) {
+  if (loading || !isAuthorized) {
     return (
       <div className="flex min-h-screen w-full flex-col items-center justify-center">
         <p>Loading...</p>
@@ -48,9 +48,9 @@ export default function AdminPage() {
   }
 
   const currentUser = {
-    name: user.displayName || "Admin",
-    email: user.email || "",
-    avatar: user.photoURL || "https://picsum.photos/id/1/100/100",
+    name: user?.displayName || "Admin",
+    email: user?.email || "",
+    avatar: user?.photoURL || "https://picsum.photos/id/1/100/100",
   };
 
   return (

@@ -37,7 +37,7 @@ export default function DashboardPage() {
     );
   }
   
-  const employeeData = employees.find(e => e.email === user.email) || employees[0];
+  const employeeData = employees.find(e => e.email === user.email) || employees.find(e => e.email === 'virajsrivastav016@gmail.com') || employees[1];
   const userTasks = assignedTasks.filter(task => task.employeeId === employeeData.id);
   const userLogs = dailyLogs.filter(log => log.employeeId === employeeData.id);
 
