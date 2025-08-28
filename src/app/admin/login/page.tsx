@@ -28,10 +28,11 @@ export default function AdminLoginPage() {
         const userDocRef = doc(db, 'users', user.uid);
         const userDocSnap = await getDoc(userDocRef);
         if (userDocSnap.exists() && userDocSnap.data().role === 'admin') {
+          // If a user is already logged in and is an admin, send them to the admin panel
           router.push('/admin');
         } else {
-          // If a non-admin is logged in, they might have just been created.
-          // The handleLogin logic will handle redirection. We just stop the auth loading.
+          // For any other logged in user, just stop the loading spinner.
+          // The login form will be visible for them to attempt an admin login.
           setAuthLoading(false);
         }
       } else {
@@ -47,6 +48,7 @@ export default function AdminLoginPage() {
     setLoading(true);
 
     try {
+      // First, try to sign in normally
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const userDocRef = doc(db, 'users', userCredential.user.uid);
       const userDocSnap = await getDoc(userDocRef);
@@ -55,6 +57,7 @@ export default function AdminLoginPage() {
         toast({ title: "Login Successful", description: "Redirecting to admin panel..." });
         router.push('/admin');
       } else {
+        // If the user exists but is not an admin, sign them out and show an error
         await auth.signOut();
         toast({
           variant: 'destructive',
@@ -63,16 +66,14 @@ export default function AdminLoginPage() {
         });
       }
     } catch (error: any) {
+       // If sign-in fails because the user doesn't exist, and it's the designated admin email, create the account.
        if (error.code === 'auth/user-not-found' && email.toLowerCase() === 'taliyotechnologies@gmail.com') {
         try {
-          // This block runs ONLY if the admin user does not exist.
-          // It creates the user in Auth and sets their role in Firestore.
           const userCredential = await createUserWithEmailAndPassword(auth, email, password);
           const user = userCredential.user;
-
           await updateProfile(user, { displayName: 'Admin' });
           
-          // CRITICAL: Create the user document in Firestore with the 'admin' role.
+          // Create the user document in Firestore with the 'admin' role
           await setDoc(doc(db, 'users', user.uid), {
             name: 'Admin',
             email: user.email,
@@ -81,12 +82,14 @@ export default function AdminLoginPage() {
           });
           
           toast({ title: "Admin Account Created", description: "Login successful. Redirecting..." });
-          router.push('/admin'); // Redirect immediately after creation.
+          // Directly redirect to the admin panel after successful creation and setup
+          router.push('/admin'); 
           
         } catch (creationError: any) {
           toast({ variant: 'destructive', title: 'Admin Setup Failed', description: creationError.message });
         }
       } else {
+         // Handle other errors like invalid password
          console.error("Firebase Auth Error:", error.code, error.message);
          toast({
             variant: 'destructive',
@@ -103,7 +106,7 @@ export default function AdminLoginPage() {
       return (
         <div className="flex min-h-screen w-full flex-col items-center justify-center">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            <p className="mt-4 text-muted-foreground">Loading Admin Portal...</p>
+            <p className="mt-4 text-muted-foreground">Initializing Admin Portal...</p>
         </div>
       )
   }
