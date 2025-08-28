@@ -4,7 +4,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { signInWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
+import { auth, db } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -13,6 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { doc, getDoc } from 'firebase/firestore';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -33,12 +34,14 @@ export default function LoginPage() {
         title: "Login Successful",
         description: `Welcome back, ${user.email}`,
       });
-
-      // Simple role check based on email
-      if (email === 'taliyotechnologies@gmail.com') {
-        router.push('/admin');
+      
+      const userDocRef = doc(db, "users", user.uid);
+      const userDoc = await getDoc(userDocRef);
+      
+      if (userDoc.exists() && userDoc.data().role === 'admin') {
+          router.push('/admin');
       } else {
-        router.push('/dashboard');
+          router.push('/dashboard');
       }
 
     } catch (error: any) {
