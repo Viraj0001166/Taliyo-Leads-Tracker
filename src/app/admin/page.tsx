@@ -19,19 +19,23 @@ export default function AdminPage() {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isAuthorized, setIsAuthorized] = useState(false);
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((currentUser) => {
       if (currentUser) {
         if (currentUser.email === 'taliyotechnologies@gmail.com') {
           setUser(currentUser);
-          setLoading(false);
+          setIsAuthorized(true);
         } else {
+          // Not an admin, redirect to employee dashboard
           router.push('/dashboard');
         }
       } else {
+        // No user logged in, redirect to login page
         router.push('/');
       }
+      setLoading(false);
     });
     return () => unsubscribe();
   }, [router]);
@@ -45,8 +49,14 @@ export default function AdminPage() {
     );
   }
 
-  if (!user) {
-    return null; 
+  if (!isAuthorized || !user) {
+    // While redirecting or if unauthorized, render nothing or a loader
+    return (
+       <div className="flex min-h-screen w-full flex-col items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <p className="mt-4 text-muted-foreground">Redirecting...</p>
+      </div>
+    );
   }
 
   const currentUser = {
@@ -106,7 +116,7 @@ export default function AdminPage() {
                   <CardDescription>
                     Send a message or notification to all employees at once.
                   </CardDescription>
-                </Header>
+                </CardHeader>
                 <CardContent>
                   <BroadcastForm />
                 </CardContent>
