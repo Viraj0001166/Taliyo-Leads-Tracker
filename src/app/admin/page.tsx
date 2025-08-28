@@ -132,7 +132,7 @@ export default function AdminPage() {
   }
 
   // Render redirecting/unauthorized state
-  if (!isAuthorized || !user) {
+  if (!isAuthorized) {
     return (
        <div className="flex min-h-screen w-full flex-col items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -143,9 +143,9 @@ export default function AdminPage() {
 
   // If loading is false and user is authorized, render the admin panel
   const currentUser = {
-    name: user.displayName || "Admin",
-    email: user.email || "",
-    avatar: user.photoURL || `https://picsum.photos/seed/${user.email}/100/100`,
+    name: user?.displayName || "Admin",
+    email: user?.email || "",
+    avatar: user?.photoURL || `https://picsum.photos/seed/${user?.email}/100/100`,
   };
 
   return (

@@ -7,21 +7,29 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { auth } from '@/lib/firebase';
+import { auth, db } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import type { User } from 'firebase/auth';
 import { ArrowLeft, Loader2 } from "lucide-react";
+import { doc, getDoc } from 'firebase/firestore';
 
 export default function SettingsPage() {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged((currentUser) => {
+    const unsubscribe = auth.onAuthStateChanged(async (currentUser) => {
       if (currentUser) {
         setUser(currentUser);
+        // Check user role
+        const userDocRef = doc(db, 'users', currentUser.uid);
+        const userDocSnap = await getDoc(userDocRef);
+        if (userDocSnap.exists() && userDocSnap.data().role === 'admin') {
+          setIsAdmin(true);
+        }
       } else {
         router.push('/');
       }
@@ -46,13 +54,15 @@ export default function SettingsPage() {
     avatar: user.photoURL || `https://picsum.photos/seed/${user.email}/100/100`,
   };
 
+  const dashboardPath = isAdmin ? '/admin' : '/dashboard';
+
   return (
     <div className="flex min-h-screen w-full flex-col">
       <PageHeader title="Settings" user={currentUser} />
       <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
         <div className="max-w-4xl mx-auto w-full">
             <Button asChild variant="outline" className="mb-4">
-              <Link href={user.email === 'taliyotechnologies@gmail.com' ? '/admin' : '/dashboard'}>
+              <Link href={dashboardPath}>
                   <ArrowLeft className="mr-2 h-4 w-4" />
                   Back to Dashboard
               </Link>

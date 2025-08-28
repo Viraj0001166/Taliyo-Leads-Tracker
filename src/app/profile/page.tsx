@@ -9,26 +9,35 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { auth } from '@/lib/firebase';
+import { auth, db } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import type { User } from 'firebase/auth';
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { updateProfile } from "firebase/auth";
+import { doc, getDoc } from 'firebase/firestore';
 
 export default function ProfilePage() {
   const router = useRouter();
   const { toast } = useToast();
   const [user, setUser] = useState<User | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
   const [displayName, setDisplayName] = useState('');
   const [isUpdating, setIsUpdating] = useState(false);
 
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged((currentUser) => {
+    const unsubscribe = auth.onAuthStateChanged(async (currentUser) => {
       if (currentUser) {
         setUser(currentUser);
         setDisplayName(currentUser.displayName || '');
+        
+        // Check user role
+        const userDocRef = doc(db, 'users', currentUser.uid);
+        const userDocSnap = await getDoc(userDocRef);
+        if (userDocSnap.exists() && userDocSnap.data().role === 'admin') {
+          setIsAdmin(true);
+        }
       } else {
         router.push('/');
       }
@@ -75,6 +84,8 @@ export default function ProfilePage() {
     email: user.email || "",
     avatar: user.photoURL || `https://picsum.photos/seed/${user.email}/100/100`,
   };
+  
+  const dashboardPath = isAdmin ? '/admin' : '/dashboard';
 
   return (
     <div className="flex min-h-screen w-full flex-col">
@@ -82,7 +93,7 @@ export default function ProfilePage() {
       <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
          <div className="max-w-2xl mx-auto w-full">
             <Button asChild variant="outline" className="mb-4">
-              <Link href={user.email === 'taliyotechnologies@gmail.com' ? '/admin' : '/dashboard'}>
+              <Link href={dashboardPath}>
                   <ArrowLeft className="mr-2 h-4 w-4" />
                   Back to Dashboard
               </Link>
