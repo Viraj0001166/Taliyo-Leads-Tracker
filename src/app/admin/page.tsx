@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Users, Trophy, ClipboardEdit, Loader2, UserPlus, BookCopy, BarChart4 } from "lucide-react";
 import { auth, db } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import type { User as FirebaseUser } from 'firebase/auth';
 import { AddUserForm } from "@/components/admin/add-user-form";
 import { collection, getDocs, query, where, onSnapshot, orderBy, limit, doc, getDoc } from "firebase/firestore";
@@ -27,11 +27,22 @@ export default function AdminPage() {
   const [performanceData, setPerformanceData] = useState<PerformanceData[]>([]);
   const [resources, setResources] = useState<Resource[]>([]);
 
+  const fetchUsers = useCallback(() => {
+    const usersCollection = collection(db, "users");
+    const qUsers = query(usersCollection, where("role", "==", "employee"));
+    return onSnapshot(qUsers, (snapshot) => {
+      const employeeList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Employee));
+      setEmployees(employeeList);
+    }, (error) => {
+      console.error("Error fetching users in real-time:", error);
+    });
+  }, []);
+
+
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(async (currentUser) => {
       if (currentUser) {
         setUser(currentUser);
-        
         try {
           const userDocRef = doc(db, "users", currentUser.uid);
           const userDocSnapshot = await getDoc(userDocRef);
@@ -39,11 +50,13 @@ export default function AdminPage() {
           if (userDocSnapshot.exists() && userDocSnapshot.data().role === 'admin') {
             setIsAuthorized(true);
           } else {
-            router.push('/employee/login');
+            // This is a non-admin user, redirect them.
+            await auth.signOut();
+            router.push('/admin/login');
           }
         } catch (error) {
             console.error("Error checking admin status:", error);
-            router.push('/employee/login');
+            router.push('/admin/login');
         }
       } else {
         router.push('/admin/login');
@@ -56,16 +69,9 @@ export default function AdminPage() {
   useEffect(() => {
     if (!isAuthorized) return;
     
-    const usersCollection = collection(db, "users");
-    const qUsers = query(usersCollection, where("role", "==", "employee"));
-    const unsubscribeEmployees = onSnapshot(qUsers, (snapshot) => {
-      const employeeList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Employee));
-      setEmployees(employeeList);
-      setLoading(false);
-    }, (error) => {
-      console.error("Error fetching users in real-time:", error);
-      setLoading(false);
-    });
+    setLoading(true);
+
+    const unsubscribeEmployees = fetchUsers();
 
     const resourcesCollection = collection(db, "resources");
     const unsubscribeResources = onSnapshot(resourcesCollection, (snapshot) => {
@@ -75,12 +81,14 @@ export default function AdminPage() {
         console.error("Error fetching resources in real-time:", error);
     });
 
+    setLoading(false);
+
     return () => {
         unsubscribeEmployees();
         unsubscribeResources();
     };
 
-  }, [isAuthorized]);
+  }, [isAuthorized, fetchUsers]);
 
   useEffect(() => {
     if (employees.length === 0 || !isAuthorized) return;
@@ -123,20 +131,11 @@ export default function AdminPage() {
   }, [employees, isAuthorized]);
 
 
-  if (loading) {
+  if (loading || !isAuthorized) {
     return (
       <div className="flex min-h-screen w-full flex-col items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        <p className="mt-4 text-muted-foreground">Loading Admin Panel...</p>
-      </div>
-    );
-  }
-
-  if (!isAuthorized) {
-     return (
-      <div className="flex min-h-screen w-full flex-col items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        <p className="mt-4 text-muted-foreground">Redirecting...</p>
+        <p className="mt-4 text-muted-foreground">Verifying Admin Access...</p>
       </div>
     );
   }
@@ -180,17 +179,35 @@ export default function AdminPage() {
           </TabsList>
           
           <TabsContent value="users" className="mt-4">
-             <Card>
-                <CardHeader>
-                  <CardTitle>Add New User</CardTitle>
-                  <CardDescription>
-                    Create a new employee or admin account. This will create a user in Firebase Auth and a corresponding record in Firestore.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <AddUserForm />
-                </CardContent>
-              </Card>
+             <div className="grid gap-6 md:grid-cols-3">
+                <div className="md:col-span-1">
+                    <Card>
+                        <CardHeader>
+                        <CardTitle>Add New User</CardTitle>
+                        <CardDescription>
+                            Create a new employee or admin account.
+                        </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                        <AddUserForm onUserAdded={fetchUsers} />
+                        </CardContent>
+                    </Card>
+                </div>
+                <div className="md:col-span-2">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Manage Employees</CardTitle>
+                            <CardDescription>
+                                View and manage existing employee accounts.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            {/* You can add a user management table here in the future */}
+                             <p className="text-sm text-muted-foreground">List of employees will be displayed here.</p>
+                        </CardContent>
+                    </Card>
+                </div>
+            </div>
           </TabsContent>
 
           <TabsContent value="performance" className="mt-4">
@@ -229,7 +246,7 @@ export default function AdminPage() {
           </TabsContent>
 
            <TabsContent value="resources" className="mt-4">
-            <ResourceManager initialResources={resources} />
+            <ResourceManager resources={resources} />
           </TabsContent>
 
           <TabsContent value="analytics" className="mt-4">

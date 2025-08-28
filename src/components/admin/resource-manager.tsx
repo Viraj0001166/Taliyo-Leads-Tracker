@@ -7,23 +7,20 @@ import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
 import type { Resource } from "@/lib/types";
 import { AddResourceForm } from './add-resource-form';
+import { ResourceList } from './resource-list';
 import { db } from '@/lib/firebase';
 import { collection, writeBatch, getDocs, doc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { initialResourcesData } from '@/lib/data';
 
 interface ResourceManagerProps {
-  initialResources: Resource[];
+  resources: Resource[];
 }
 
-export function ResourceManager({ initialResources }: ResourceManagerProps) {
+export function ResourceManager({ resources }: ResourceManagerProps) {
   const { toast } = useToast();
   const [isSeeding, setIsSeeding] = useState(false);
 
-  const handleResourceAdded = () => {
-    // The parent component's onSnapshot listener will handle the update
-  };
-  
   const seedInitialData = async () => {
     setIsSeeding(true);
     try {
@@ -64,19 +61,22 @@ export function ResourceManager({ initialResources }: ResourceManagerProps) {
       <div className="md:col-span-1">
         <Card>
           <CardHeader>
-            <CardTitle>Add New Resource</CardTitle>
-            <CardDescription>Create a new template or resource for your employees.</CardDescription>
+            <CardTitle>Add/Update Resource</CardTitle>
+            <CardDescription>Create a new template or edit an existing one.</CardDescription>
           </CardHeader>
           <CardContent>
-            <AddResourceForm onResourceAdded={handleResourceAdded} />
+            <AddResourceForm />
              <div className="mt-4 border-t pt-4">
-                 <Button onClick={seedInitialData} disabled={isSeeding} variant="outline" size="sm" className="w-full">
+                 <Button onClick={seedInitialData} disabled={isSeeding || resources.length > 0} variant="outline" size="sm" className="w-full">
                     {isSeeding && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     Seed Initial Data
                 </Button>
             </div>
           </CardContent>
         </Card>
+      </div>
+      <div className="md:col-span-2">
+        <ResourceList resources={resources} />
       </div>
     </div>
   );

@@ -38,7 +38,11 @@ const formSchema = z.object({
   }),
 });
 
-export function AddUserForm() {
+interface AddUserFormProps {
+  onUserAdded: () => void;
+}
+
+export function AddUserForm({ onUserAdded }: AddUserFormProps) {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
 
@@ -56,18 +60,13 @@ export function AddUserForm() {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setLoading(true);
     try {
-      // Note: This creates the user in Firebase Auth.
-      // For a real app, you might use a Cloud Function to handle user creation
-      // to avoid exposing user creation logic on the client.
       const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
       
       const user = userCredential.user;
       const displayName = `${values.firstName} ${values.lastName}`;
       
-      // Update Firebase Auth profile
       await updateProfile(user, { displayName });
 
-      // Create a corresponding document in Firestore 'users' collection
       await setDoc(doc(db, "users", user.uid), {
         name: displayName,
         email: values.email,
@@ -80,6 +79,7 @@ export function AddUserForm() {
         description: `Account for ${displayName} (${values.email}) has been created with the role ${values.role}.`,
       });
       form.reset();
+      onUserAdded(); // Callback to refresh the user list
     } catch (error: any) {
       console.error('Error creating user:', error);
       toast({

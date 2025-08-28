@@ -43,18 +43,16 @@ const formSchema = z.object({
     path: ['customCategory'],
 });
 
-interface AddResourceFormProps {
-  onResourceAdded: () => void;
-}
-
 const predefinedCategories = [
     "Email Templates",
-    "Lead Generation Tools",
-    "Outreach Scripts (Phone/WhatsApp)",
-    "Daily Task Sheets",
+    "Lead Generation Tools & Links",
+    "Scripts",
+    "Daily Task Sheet / Workflow",
+    "Training & Tutorials",
+    "Motivation & Guidelines",
 ];
 
-export function AddResourceForm({ onResourceAdded }: AddResourceFormProps) {
+export function AddResourceForm() {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [showCustomCategory, setShowCustomCategory] = useState(false);
@@ -86,7 +84,6 @@ export function AddResourceForm({ onResourceAdded }: AddResourceFormProps) {
       });
       form.reset();
       setShowCustomCategory(false);
-      onResourceAdded();
     } catch (error: any) {
       console.error('Error adding resource:', error);
       toast({
