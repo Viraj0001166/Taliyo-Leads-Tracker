@@ -7,14 +7,15 @@ import { Leaderboard } from "@/components/admin/leaderboard";
 import { TaskAssignmentForm } from "@/components/admin/task-assignment-form";
 import { BroadcastForm } from "@/components/admin/broadcast-form";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, Trophy, ClipboardEdit, Loader2, UserPlus } from "lucide-react";
+import { Users, Trophy, ClipboardEdit, Loader2, UserPlus, BookCopy } from "lucide-react";
 import { auth, db } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import type { User as FirebaseUser } from 'firebase/auth';
 import { AddUserForm } from "@/components/admin/add-user-form";
 import { collection, getDocs, query, where, onSnapshot } from "firebase/firestore";
-import type { Employee, PerformanceData } from "@/lib/types";
+import type { Employee, PerformanceData, Resource } from "@/lib/types";
+import { ResourceManager } from "@/components/admin/resource-manager";
 
 export default function AdminPage() {
   const router = useRouter();
@@ -23,6 +24,7 @@ export default function AdminPage() {
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [performanceData, setPerformanceData] = useState<PerformanceData[]>([]);
+  const [resources, setResources] = useState<Resource[]>([]);
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(async (currentUser) => {
@@ -65,17 +67,29 @@ export default function AdminPage() {
   useEffect(() => {
     if (!isAuthorized) return;
     
+    // Subscribe to employees
     const usersCollection = collection(db, "users");
     const q = query(usersCollection, where("role", "==", "employee"));
-
-    const unsubscribe = onSnapshot(q, (snapshot) => {
+    const unsubscribeEmployees = onSnapshot(q, (snapshot) => {
       const employeeList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Employee));
       setEmployees(employeeList);
     }, (error) => {
       console.error("Error fetching employees in real-time:", error);
     });
 
-    return () => unsubscribe();
+    // Subscribe to resources
+    const resourcesCollection = collection(db, "resources");
+    const unsubscribeResources = onSnapshot(resourcesCollection, (snapshot) => {
+        const resourceList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Resource));
+        setResources(resourceList);
+    }, (error) => {
+        console.error("Error fetching resources in real-time:", error);
+    });
+
+    return () => {
+        unsubscribeEmployees();
+        unsubscribeResources();
+    };
 
   }, [isAuthorized]);
 
@@ -111,7 +125,7 @@ export default function AdminPage() {
       <PageHeader title="Admin Panel" user={currentUser} />
       <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
         <Tabs defaultValue="users" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
              <TabsTrigger value="performance">
               <Users className="mr-2 h-4 w-4" />
               Employee Performance
@@ -127,6 +141,10 @@ export default function AdminPage() {
             <TabsTrigger value="users">
               <UserPlus className="mr-2 h-4 w-4" />
               User Management
+            </TabsTrigger>
+             <TabsTrigger value="resources">
+              <BookCopy className="mr-2 h-4 w-4" />
+              Resources
             </TabsTrigger>
           </TabsList>
           
@@ -177,6 +195,10 @@ export default function AdminPage() {
                 </CardContent>
               </Card>
             </div>
+          </TabsContent>
+
+           <TabsContent value="resources" className="mt-4">
+            <ResourceManager initialResources={resources} />
           </TabsContent>
         </Tabs>
       </main>
