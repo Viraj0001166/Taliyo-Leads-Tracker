@@ -30,8 +30,8 @@ export default function AdminLoginPage() {
         if (userDocSnap.exists() && userDocSnap.data().role === 'admin') {
           router.push('/admin');
         } else {
-          // If a non-admin is logged in, sign them out and redirect to admin login
-          await auth.signOut();
+          // If a non-admin is logged in, they might have just been created.
+          // The handleLogin logic will handle redirection. We just stop the auth loading.
           setAuthLoading(false);
         }
       } else {
@@ -65,10 +65,14 @@ export default function AdminLoginPage() {
     } catch (error: any) {
        if (error.code === 'auth/user-not-found' && email.toLowerCase() === 'taliyotechnologies@gmail.com') {
         try {
+          // This block runs ONLY if the admin user does not exist.
+          // It creates the user in Auth and sets their role in Firestore.
           const userCredential = await createUserWithEmailAndPassword(auth, email, password);
           const user = userCredential.user;
 
           await updateProfile(user, { displayName: 'Admin' });
+          
+          // CRITICAL: Create the user document in Firestore with the 'admin' role.
           await setDoc(doc(db, 'users', user.uid), {
             name: 'Admin',
             email: user.email,
@@ -77,17 +81,17 @@ export default function AdminLoginPage() {
           });
           
           toast({ title: "Admin Account Created", description: "Login successful. Redirecting..." });
-          router.push('/admin');
+          router.push('/admin'); // Redirect immediately after creation.
           
         } catch (creationError: any) {
-          toast({ variant: 'destructive', title: 'Setup Failed', description: creationError.message });
+          toast({ variant: 'destructive', title: 'Admin Setup Failed', description: creationError.message });
         }
       } else {
          console.error("Firebase Auth Error:", error.code, error.message);
          toast({
             variant: 'destructive',
             title: 'Login Failed',
-            description: "Invalid credentials or you are not an admin.",
+            description: "Invalid credentials or an unknown error occurred.",
          });
       }
     } finally {
