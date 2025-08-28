@@ -53,7 +53,7 @@ export function PageHeader({ title, user }: PageHeaderProps) {
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-background/80 backdrop-blur-sm px-4 md:px-6">
       <Link href="/" className="flex items-center gap-2 font-semibold">
-        <Image src="https://picsum.photos/24/24" alt="Taliyo Lead Track Logo" width={24} height={24} className="rounded-full" data-ai-hint="logo company" />
+        <Image src="https://placehold.co/32x32/3B82F6/FFFFFF/png?text=T" alt="Taliyo Lead Track Logo" width={24} height={24} className="rounded-full" data-ai-hint="logo company" />
         <span className="text-lg hidden md:inline-block">Taliyo Lead Track</span>
       </Link>
       <div className="flex w-full items-center gap-4 md:ml-auto md:gap-2 lg:gap-4">

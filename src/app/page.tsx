@@ -57,7 +57,7 @@ export default function LoginPage() {
     <main className="flex min-h-screen flex-col items-center justify-center bg-background p-8">
       <div className="flex flex-col items-center justify-center text-center mb-8">
         <div className="bg-primary text-primary-foreground p-2 rounded-full mb-4">
-          <Image src="https://picsum.photos/48/48" alt="Taliyo Lead Track Logo" width={48} height={48} className="rounded-full" data-ai-hint="logo company" />
+          <Image src="https://placehold.co/48x48/3B82F6/FFFFFF/png?text=T" alt="Taliyo Lead Track Logo" width={48} height={48} className="rounded-full" data-ai-hint="logo company" />
         </div>
         <h1 className="text-4xl font-bold text-foreground tracking-tighter">Taliyo Lead Track</h1>
         <p className="text-muted-foreground mt-2 max-w-md">Streamline your team's performance tracking. Log daily tasks, view progress, and stay ahead.</p>
