@@ -7,7 +7,6 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import {
   Form,
   FormControl,
@@ -25,10 +24,12 @@ import {
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, UserPlus } from 'lucide-react';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 
 const formSchema = z.object({
+  firstName: z.string().min(1, { message: 'First name is required.' }),
+  lastName: z.string().min(1, { message: 'Last name is required.' }),
   email: z.string().email({ message: 'Invalid email address.' }),
   password: z.string().min(6, { message: 'Password must be at least 6 characters.' }),
   role: z.enum(['employee', 'admin'], {
@@ -43,6 +44,8 @@ export function AddUserForm() {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
+      firstName: '',
+      lastName: '',
       email: '',
       password: '',
       role: 'employee',
@@ -52,17 +55,15 @@ export function AddUserForm() {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setLoading(true);
     try {
-      // NOTE: In a real-world scenario, you would use a secure backend function
-      // (like a Firebase Cloud Function) to create users and assign custom claims for roles.
-      // Creating users directly on the client is generally not recommended for security reasons
-      // as it exposes more of the auth logic.
-      // The role assignment here is for UI purposes only and has no real security impact without a backend.
+      const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
       
-      await createUserWithEmailAndPassword(auth, values.email, values.password);
+      const user = userCredential.user;
+      const displayName = `${values.firstName} ${values.lastName}`;
+      await updateProfile(user, { displayName });
 
       toast({
         title: 'User Created Successfully!',
-        description: `Account for ${values.email} has been created with the role ${values.role}.`,
+        description: `Account for ${displayName} (${values.email}) has been created with the role ${values.role}.`,
       });
       form.reset();
     } catch (error: any) {
@@ -79,7 +80,35 @@ export function AddUserForm() {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="firstName"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>First Name</FormLabel>
+                <FormControl>
+                  <Input placeholder="John" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="lastName"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Last Name</FormLabel>
+                <FormControl>
+                  <Input placeholder="Doe" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
         <FormField
           control={form.control}
           name="email"

@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from 'react';
@@ -18,7 +19,6 @@ export function CopyButton({ textToCopy }: CopyButtonProps) {
       setHasCopied(true);
       toast({
         title: "Copied to clipboard!",
-        description: "You can now paste the template.",
       });
       setTimeout(() => {
         setHasCopied(false);
