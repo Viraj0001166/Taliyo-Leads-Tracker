@@ -1,3 +1,5 @@
+
+'use client';
 import { PageHeader } from "@/components/common/page-header";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { employees, performanceData } from "@/lib/data";
@@ -7,12 +9,46 @@ import { TaskAssignmentForm } from "@/components/admin/task-assignment-form";
 import { BroadcastForm } from "@/components/admin/broadcast-form";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, Trophy, ClipboardEdit } from "lucide-react";
+import { auth } from '@/lib/firebase';
+import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import type { User } from 'firebase/auth';
 
 export default function AdminPage() {
+  const router = useRouter();
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      if (user) {
+        if (user.email === 'admin@leadtrack.pulse') {
+          setUser(user);
+        } else {
+          router.push('/dashboard');
+        }
+      } else {
+        router.push('/');
+      }
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [router]);
+
+
+  if (loading || !user) {
+    return (
+      <div className="flex min-h-screen w-full flex-col items-center justify-center">
+        <p>Loading...</p>
+      </div>
+    );
+  }
+
   const currentUser = {
-    name: "Admin",
-    email: "tum@leadtrack.pulse",
-    avatar: "https://picsum.photos/id/1/100/100",
+    name: user.displayName || "Admin",
+    email: user.email || "",
+    avatar: user.photoURL || "https://picsum.photos/id/1/100/100",
   };
 
   return (
