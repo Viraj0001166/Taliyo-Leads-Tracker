@@ -30,20 +30,27 @@ export default function AdminPage() {
         setUser(currentUser);
         // Check if the user is the hardcoded admin OR if their role is 'admin' in Firestore
         const userDocQuery = query(collection(db, "users"), where("email", "==", currentUser.email));
-        const userDocSnapshot = await getDocs(userDocQuery);
-
-        let isAdmin = false;
-        if (!userDocSnapshot.empty) {
-          const userData = userDocSnapshot.docs[0].data();
-          if (userData.role === 'admin') {
-            isAdmin = true;
+        
+        try {
+          const userDocSnapshot = await getDocs(userDocQuery);
+          let isAdmin = false;
+          if (!userDocSnapshot.empty) {
+            const userData = userDocSnapshot.docs[0].data();
+            if (userData.role === 'admin') {
+              isAdmin = true;
+            }
           }
-        }
 
-        if (currentUser.email === 'taliyotechnologies@gmail.com' || isAdmin) {
-          setIsAuthorized(true);
-        } else {
-          router.push('/dashboard'); // Not an admin, redirect to employee dashboard
+          if (currentUser.email === 'taliyotechnologies@gmail.com' || isAdmin) {
+            setIsAuthorized(true);
+          } else {
+            // Not an admin, redirect to employee dashboard
+            router.push('/dashboard');
+          }
+        } catch (error) {
+            console.error("Error checking admin status:", error);
+            // If we can't check, assume not authorized and redirect.
+            router.push('/dashboard');
         }
       } else {
         // No user logged in, redirect to login page
@@ -152,7 +159,7 @@ export default function AdminPage() {
                   <CardTitle>Assign a New Task</CardTitle>
                   <CardDescription>
                     Assign a specific task to an individual employee.
-                  </Description>
+                  </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <TaskAssignmentForm employees={employees} />
@@ -163,7 +170,7 @@ export default function AdminPage() {
                   <CardTitle>Broadcast Notification</CardTitle>
                   <CardDescription>
                     Send a message or notification to all employees at once.
-                  </Description>
+                  </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <BroadcastForm />
