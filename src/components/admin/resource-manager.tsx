@@ -1,14 +1,14 @@
 
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
 import type { Resource } from "@/lib/types";
 import { AddResourceForm } from './add-resource-form';
 import { db } from '@/lib/firebase';
-import { collection, writeBatch, getDocs } from 'firebase/firestore';
+import { collection, writeBatch, getDocs, doc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { initialResourcesData } from '@/lib/data';
 

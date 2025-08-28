@@ -49,11 +49,9 @@ interface AddResourceFormProps {
 
 const predefinedCategories = [
     "Email Templates",
-    "Lead Generation Tools & Links",
-    "Scripts",
-    "Daily Task Sheet / Workflow",
-    "Training & Tutorials",
-    "Motivation & Guidelines",
+    "Lead Generation Tools",
+    "Outreach Scripts (Phone/WhatsApp)",
+    "Daily Task Sheets",
 ];
 
 export function AddResourceForm({ onResourceAdded }: AddResourceFormProps) {
