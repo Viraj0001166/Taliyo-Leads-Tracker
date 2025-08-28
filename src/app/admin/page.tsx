@@ -25,9 +25,11 @@ export default function AdminPage() {
         if (user.email === 'taliyotechnologies@gmail.com') {
           setUser(user);
         } else {
+          // If a non-admin user is logged in, send them to their dashboard
           router.push('/dashboard');
         }
       } else {
+        // If no user is logged in, send them to the login page
         router.push('/');
       }
       setLoading(false);
