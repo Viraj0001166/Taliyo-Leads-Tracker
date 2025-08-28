@@ -45,39 +45,41 @@ export function VisitorAnalytics() {
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
         ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Employee</TableHead>
-                <TableHead>Login Time</TableHead>
-                <TableHead>IP Address</TableHead>
-                <TableHead>System (User Agent)</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {visitorLogs.map((log) => (
-                <TableRow key={log.id}>
-                  <TableCell>
-                     <div className="flex items-center gap-3">
-                        <Avatar>
-                            <AvatarImage src={`https://picsum.photos/seed/${log.employeeEmail}/100/100`} alt={log.employeeName} />
-                            <AvatarFallback>{log.employeeName.charAt(0)}</AvatarFallback>
-                        </Avatar>
-                        <div>
-                            <p className="font-medium">{log.employeeName}</p>
-                            <p className="text-sm text-muted-foreground">{log.employeeEmail}</p>
-                        </div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    {format(new Date(log.loginTime.seconds * 1000), 'PPpp')}
-                  </TableCell>
-                  <TableCell>{log.ipAddress}</TableCell>
-                  <TableCell className="text-xs text-muted-foreground">{log.userAgent}</TableCell>
+          <div className="w-full overflow-x-auto">
+            <Table>
+                <TableHeader>
+                <TableRow>
+                    <TableHead>Employee</TableHead>
+                    <TableHead>Login Time</TableHead>
+                    <TableHead>IP Address</TableHead>
+                    <TableHead>System (User Agent)</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+                </TableHeader>
+                <TableBody>
+                {visitorLogs.map((log) => (
+                    <TableRow key={log.id}>
+                    <TableCell>
+                        <div className="flex items-center gap-3 min-w-[200px]">
+                            <Avatar>
+                                <AvatarImage src={`https://picsum.photos/seed/${log.employeeEmail}/100/100`} alt={log.employeeName} />
+                                <AvatarFallback>{log.employeeName.charAt(0)}</AvatarFallback>
+                            </Avatar>
+                            <div>
+                                <p className="font-medium">{log.employeeName}</p>
+                                <p className="text-sm text-muted-foreground">{log.employeeEmail}</p>
+                            </div>
+                        </div>
+                    </TableCell>
+                    <TableCell className="min-w-[200px]">
+                        {format(new Date(log.loginTime.seconds * 1000), 'PPpp')}
+                    </TableCell>
+                    <TableCell className="min-w-[120px]">{log.ipAddress}</TableCell>
+                    <TableCell className="text-xs text-muted-foreground min-w-[300px]">{log.userAgent}</TableCell>
+                    </TableRow>
+                ))}
+                </TableBody>
+            </Table>
+          </div>
         )}
       </CardContent>
     </Card>

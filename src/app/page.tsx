@@ -22,14 +22,22 @@ export default function LandingPage() {
         try {
           const userDocRef = doc(db, 'users', user.uid);
           const userDocSnap = await getDoc(userDocRef);
-          if (userDocSnap.exists() && userDocSnap.data().role === 'admin') {
-            router.push('/admin');
+          if (userDocSnap.exists()) {
+            if (userDocSnap.data().role === 'admin') {
+              router.push('/admin');
+            } else {
+              router.push('/dashboard');
+            }
           } else {
-            router.push('/dashboard');
+             // If user exists in auth but not firestore, they can't be routed.
+             // Sign them out and let them re-authenticate through the correct portal.
+             await auth.signOut();
+             setLoading(false);
           }
         } catch (error) {
           console.error("Error checking user role, redirecting to employee login:", error);
-          router.push('/employee/login');
+          await auth.signOut();
+          setLoading(false);
         }
       } else {
         setLoading(false);
@@ -49,12 +57,12 @@ export default function LandingPage() {
   }
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center bg-background p-8">
+    <main className="flex min-h-screen flex-col items-center justify-center bg-background p-4 sm:p-8">
       <div className="flex flex-col items-center justify-center text-center mb-8">
         <div className="bg-primary text-primary-foreground p-2 rounded-full mb-4">
            <Image src="https://placehold.co/48x48/3B82F6/FFFFFF/png?text=T" alt="Taliyo Lead Track Logo" width={48} height={48} className="rounded-full" data-ai-hint="logo company" />
         </div>
-        <h1 className="text-4xl font-bold text-foreground tracking-tighter">Welcome to Taliyo Lead Track</h1>
+        <h1 className="text-3xl md:text-4xl font-bold text-foreground tracking-tighter">Welcome to Taliyo Lead Track</h1>
         <p className="text-muted-foreground mt-2 max-w-md">Please select your login portal.</p>
       </div>
 

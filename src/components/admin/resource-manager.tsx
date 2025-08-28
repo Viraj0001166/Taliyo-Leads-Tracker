@@ -57,12 +57,12 @@ export function ResourceManager({ resources }: ResourceManagerProps) {
   };
 
   return (
-    <div className="grid gap-6 md:grid-cols-3">
-      <div className="md:col-span-1">
+    <div className="grid gap-6 lg:grid-cols-3">
+      <div className="lg:col-span-1">
         <Card>
           <CardHeader>
-            <CardTitle>Add/Update Resource</CardTitle>
-            <CardDescription>Create a new template or edit an existing one.</CardDescription>
+            <CardTitle>Add New Resource</CardTitle>
+            <CardDescription>Create a new template or a handy link for your team.</CardDescription>
           </CardHeader>
           <CardContent>
             <AddResourceForm />
@@ -75,7 +75,7 @@ export function ResourceManager({ resources }: ResourceManagerProps) {
           </CardContent>
         </Card>
       </div>
-      <div className="md:col-span-2">
+      <div className="lg:col-span-2">
         <ResourceList resources={resources} />
       </div>
     </div>

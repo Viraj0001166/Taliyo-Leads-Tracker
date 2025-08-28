@@ -13,8 +13,8 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState, useCallback } from 'react';
 import type { User as FirebaseUser } from 'firebase/auth';
 import { AddUserForm } from "@/components/admin/add-user-form";
-import { collection, getDocs, query, where, onSnapshot, orderBy, limit, doc, getDoc } from "firebase/firestore";
-import type { Employee, PerformanceData, Resource, DailyLog } from "@/lib/types";
+import { collection, onSnapshot, query, where, doc, getDoc } from "firebase/firestore";
+import type { Employee, PerformanceData, Resource } from "@/lib/types";
 import { ResourceManager } from "@/components/admin/resource-manager";
 import { VisitorAnalytics } from "@/components/admin/visitor-analytics";
 
@@ -43,21 +43,24 @@ export default function AdminPage() {
     const unsubscribe = auth.onAuthStateChanged(async (currentUser) => {
       if (currentUser) {
         setUser(currentUser);
-        try {
-          const userDocRef = doc(db, "users", currentUser.uid);
-          const userDocSnapshot = await getDoc(userDocRef);
+        // Delay role check slightly to allow for state propagation
+        setTimeout(async () => {
+          try {
+            const userDocRef = doc(db, "users", currentUser.uid);
+            const userDocSnapshot = await getDoc(userDocRef);
 
-          if (userDocSnapshot.exists() && userDocSnapshot.data().role === 'admin') {
-            setIsAuthorized(true);
-          } else {
-            // This is a non-admin user, redirect them.
-            await auth.signOut();
-            router.push('/admin/login');
+            if (userDocSnapshot.exists() && userDocSnapshot.data().role === 'admin') {
+              setIsAuthorized(true);
+            } else {
+              router.push('/admin/login');
+            }
+          } catch (error) {
+              console.error("Error checking admin status:", error);
+              router.push('/admin/login');
+          } finally {
+            setLoading(false);
           }
-        } catch (error) {
-            console.error("Error checking admin status:", error);
-            router.push('/admin/login');
-        }
+        }, 50); 
       } else {
         router.push('/admin/login');
       }
@@ -69,8 +72,6 @@ export default function AdminPage() {
   useEffect(() => {
     if (!isAuthorized) return;
     
-    setLoading(true);
-
     const unsubscribeEmployees = fetchUsers();
 
     const resourcesCollection = collection(db, "resources");
@@ -81,8 +82,6 @@ export default function AdminPage() {
         console.error("Error fetching resources in real-time:", error);
     });
 
-    setLoading(false);
-
     return () => {
         unsubscribeEmployees();
         unsubscribeResources();
@@ -90,46 +89,11 @@ export default function AdminPage() {
 
   }, [isAuthorized, fetchUsers]);
 
-  useEffect(() => {
-    if (employees.length === 0 || !isAuthorized) return;
-
-    const fetchPerformanceData = async () => {
-        const perfDataPromises = employees.map(async (employee) => {
-            const logsCollection = collection(db, "dailyLogs");
-            const qLogs = query(
-              logsCollection,
-              where("employeeId", "==", employee.id),
-              orderBy("date", "desc"),
-              limit(1) 
-            );
-            const logSnapshot = await getDocs(qLogs);
-            if (!logSnapshot.empty) {
-              const lastLog = logSnapshot.docs[0].data() as DailyLog;
-              return {
-                employeeName: employee.name,
-                linkedinConnections: lastLog.linkedinConnections,
-                followUps: lastLog.followUps,
-                coldEmails: lastLog.coldEmails,
-                leadsGenerated: lastLog.leadsGenerated,
-              };
-            }
-            return {
-              employeeName: employee.name,
-              linkedinConnections: 0,
-              followUps: 0,
-              coldEmails: 0,
-              leadsGenerated: 0,
-            };
-        });
-
-        const perfDataResults = await Promise.all(perfDataPromises);
-        setPerformanceData(perfDataResults);
-    };
-
-    fetchPerformanceData();
-
-  }, [employees, isAuthorized]);
-
+  const currentUser = {
+    name: user?.displayName || "Admin",
+    email: user?.email || "",
+    avatar: user?.photoURL || `https://picsum.photos/seed/${user?.email}/100/100`,
+  };
 
   if (loading || !isAuthorized) {
     return (
@@ -140,19 +104,13 @@ export default function AdminPage() {
     );
   }
 
-  const currentUser = {
-    name: user?.displayName || "Admin",
-    email: user?.email || "",
-    avatar: user?.photoURL || `https://picsum.photos/seed/${user?.email}/100/100`,
-  };
-
   return (
     <div className="flex min-h-screen w-full flex-col">
       <PageHeader title="Admin Panel" user={currentUser} />
       <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
         <Tabs defaultValue="performance" className="w-full">
-          <TabsList className="grid w-full grid-cols-1 md:grid-cols-2 lg:grid-cols-6">
-            <TabsTrigger value="performance">
+          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-6 h-auto">
+            <TabsTrigger value="performance" className="flex-wrap">
               <Users className="mr-2 h-4 w-4" />
               Employee Performance
             </TabsTrigger>
@@ -179,8 +137,8 @@ export default function AdminPage() {
           </TabsList>
           
           <TabsContent value="users" className="mt-4">
-             <div className="grid gap-6 md:grid-cols-3">
-                <div className="md:col-span-1">
+             <div className="grid gap-6 lg:grid-cols-3">
+                <div className="lg:col-span-1">
                     <Card>
                         <CardHeader>
                         <CardTitle>Add New User</CardTitle>
@@ -193,19 +151,8 @@ export default function AdminPage() {
                         </CardContent>
                     </Card>
                 </div>
-                <div className="md:col-span-2">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Manage Employees</CardTitle>
-                            <CardDescription>
-                                View and manage existing employee accounts.
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            {/* You can add a user management table here in the future */}
-                             <p className="text-sm text-muted-foreground">List of employees will be displayed here.</p>
-                        </CardContent>
-                    </Card>
+                <div className="lg:col-span-2">
+                    <EmployeePerformance employees={employees} />
                 </div>
             </div>
           </TabsContent>

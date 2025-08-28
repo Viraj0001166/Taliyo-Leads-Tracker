@@ -64,47 +64,49 @@ export function EmployeePerformance({ employees }: EmployeePerformanceProps) {
         <CardDescription>An overview of the most recently logged performance metrics for all employees.</CardDescription>
       </CardHeader>
       <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Employee</TableHead>
-              <TableHead className="text-center">Connections</TableHead>
-              <TableHead className="text-center">Follow-ups</TableHead>
-              <TableHead className="text-center">Emails Sent</TableHead>
-              <TableHead className="text-center">Leads</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {employees.map((employee) => (
-              <TableRow key={employee.id}>
-                <TableCell>
-                  <div className="flex items-center gap-3">
-                    <Avatar>
-                      <AvatarImage src={employee.avatar} alt={employee.name} />
-                      <AvatarFallback>{employee.name.charAt(0)}</AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <p className="font-medium">{employee.name}</p>
-                      <p className="text-sm text-muted-foreground">{employee.email}</p>
+        <div className="w-full overflow-x-auto">
+            <Table>
+            <TableHeader>
+                <TableRow>
+                <TableHead>Employee</TableHead>
+                <TableHead className="text-center">Connections</TableHead>
+                <TableHead className="text-center">Follow-ups</TableHead>
+                <TableHead className="text-center">Emails Sent</TableHead>
+                <TableHead className="text-center">Leads</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+            </TableHeader>
+            <TableBody>
+                {employees.map((employee) => (
+                <TableRow key={employee.id}>
+                    <TableCell>
+                    <div className="flex items-center gap-3 min-w-[200px]">
+                        <Avatar>
+                        <AvatarImage src={employee.avatar} alt={employee.name} />
+                        <AvatarFallback>{employee.name.charAt(0)}</AvatarFallback>
+                        </Avatar>
+                        <div>
+                        <p className="font-medium">{employee.name}</p>
+                        <p className="text-sm text-muted-foreground">{employee.email}</p>
+                        </div>
                     </div>
-                  </div>
-                </TableCell>
-                <TableCell className="text-center font-medium">{metrics[employee.id]?.connections ?? 'N/A'}</TableCell>
-                <TableCell className="text-center font-medium">{metrics[employee.id]?.followUps ?? 'N/A'}</TableCell>
-                <TableCell className="text-center font-medium">{metrics[employee.id]?.emails ?? 'N/A'}</TableCell>
-                <TableCell className="text-center">
-                  <Badge variant={ (metrics[employee.id]?.leads ?? 0) > 0 ? "default" : "secondary"}>
-                    {metrics[employee.id]?.leads ?? 'N/A'}
-                  </Badge>
-                </TableCell>
-                <TableCell className="text-right">
-                  <AIPerformanceAnalyzer employee={employee} />
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+                    </TableCell>
+                    <TableCell className="text-center font-medium">{metrics[employee.id]?.connections ?? 'N/A'}</TableCell>
+                    <TableCell className="text-center font-medium">{metrics[employee.id]?.followUps ?? 'N/A'}</TableCell>
+                    <TableCell className="text-center font-medium">{metrics[employee.id]?.emails ?? 'N/A'}</TableCell>
+                    <TableCell className="text-center">
+                    <Badge variant={ (metrics[employee.id]?.leads ?? 0) > 0 ? "default" : "secondary"}>
+                        {metrics[employee.id]?.leads ?? 'N/A'}
+                    </Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                    <AIPerformanceAnalyzer employee={employee} />
+                    </TableCell>
+                </TableRow>
+                ))}
+            </TableBody>
+            </Table>
+        </div>
       </CardContent>
     </Card>
   );
