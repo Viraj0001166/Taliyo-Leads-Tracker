@@ -16,6 +16,13 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, PlusCircle } from 'lucide-react';
 import { collection, addDoc } from 'firebase/firestore';
@@ -23,22 +30,43 @@ import { db } from '@/lib/firebase';
 
 const formSchema = z.object({
   category: z.string().min(1, { message: 'Category is required.' }),
+  customCategory: z.string().optional(),
   title: z.string().min(1, { message: 'Title is required.' }),
   content: z.string().min(10, { message: 'Content must be at least 10 characters.' }),
+}).refine(data => {
+    if (data.category === 'Other' && (!data.customCategory || data.customCategory.trim() === '')) {
+        return false;
+    }
+    return true;
+}, {
+    message: 'Custom category cannot be empty.',
+    path: ['customCategory'],
 });
 
 interface AddResourceFormProps {
   onResourceAdded: () => void;
 }
 
+const predefinedCategories = [
+    "Email Templates",
+    "Lead Generation Tools",
+    "Outreach Scripts",
+    "Daily Task Sheets",
+    "Training & Tutorials",
+    "Sales Guidelines",
+    "Motivation & Growth",
+];
+
 export function AddResourceForm({ onResourceAdded }: AddResourceFormProps) {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  const [showCustomCategory, setShowCustomCategory] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       category: '',
+      customCategory: '',
       title: '',
       content: '',
     },
@@ -47,12 +75,20 @@ export function AddResourceForm({ onResourceAdded }: AddResourceFormProps) {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setLoading(true);
     try {
-      await addDoc(collection(db, "resources"), values);
+      const finalCategory = values.category === 'Other' ? values.customCategory : values.category;
+
+      await addDoc(collection(db, "resources"), {
+        category: finalCategory,
+        title: values.title,
+        content: values.content,
+      });
+
       toast({
         title: 'Resource Added!',
         description: `The resource "${values.title}" has been added successfully.`,
       });
       form.reset();
+      setShowCustomCategory(false);
       onResourceAdded();
     } catch (error: any) {
       console.error('Error adding resource:', error);
@@ -75,13 +111,46 @@ export function AddResourceForm({ onResourceAdded }: AddResourceFormProps) {
           render={({ field }) => (
             <FormItem>
               <FormLabel>Category</FormLabel>
-              <FormControl>
-                <Input placeholder="e.g., Email Templates" {...field} />
-              </FormControl>
+               <Select 
+                onValueChange={(value) => {
+                    field.onChange(value);
+                    setShowCustomCategory(value === 'Other');
+                }} 
+                defaultValue={field.value}
+               >
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a category" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {predefinedCategories.map((cat) => (
+                    <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                  ))}
+                  <SelectItem value="Other">Other (Please specify)</SelectItem>
+                </SelectContent>
+              </Select>
               <FormMessage />
             </FormItem>
           )}
         />
+
+        {showCustomCategory && (
+            <FormField
+            control={form.control}
+            name="customCategory"
+            render={({ field }) => (
+                <FormItem>
+                <FormLabel>Custom Category Name</FormLabel>
+                <FormControl>
+                    <Input placeholder="Enter the new category name" {...field} />
+                </FormControl>
+                <FormMessage />
+                </FormItem>
+            )}
+            />
+        )}
+        
         <FormField
           control={form.control}
           name="title"
