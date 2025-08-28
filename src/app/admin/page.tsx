@@ -67,14 +67,15 @@ export default function AdminPage() {
   useEffect(() => {
     if (!isAuthorized) return;
     
-    // Subscribe to employees
+    // Subscribe to all users and filter for employees on the client side.
+    // This is simpler and less prone to Firestore security rule issues.
     const usersCollection = collection(db, "users");
-    const q = query(usersCollection, where("role", "==", "employee"));
-    const unsubscribeEmployees = onSnapshot(q, (snapshot) => {
-      const employeeList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Employee));
+    const unsubscribeEmployees = onSnapshot(usersCollection, (snapshot) => {
+      const allUsers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Employee));
+      const employeeList = allUsers.filter(user => user.role === 'employee');
       setEmployees(employeeList);
     }, (error) => {
-      console.error("Error fetching employees in real-time:", error);
+      console.error("Error fetching users in real-time:", error);
     });
 
     // Subscribe to resources
