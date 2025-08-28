@@ -44,3 +44,16 @@ export interface PerformanceData {
   coldEmails: number;
   leadsGenerated: number;
 }
+
+export interface VisitorLog {
+  id: string;
+  employeeId: string;
+  employeeName: string;
+  employeeEmail: string;
+  loginTime: {
+      seconds: number,
+      nanoseconds: number
+  };
+  ipAddress: string;
+  userAgent: string;
+}

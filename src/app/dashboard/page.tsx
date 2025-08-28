@@ -10,8 +10,27 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import type { User as FirebaseUser } from 'firebase/auth';
 import { Loader2 } from "lucide-react";
-import { collection, query, where, getDocs, doc, getDoc, limit } from "firebase/firestore";
+import { collection, query, where, getDocs, doc, getDoc, limit, addDoc, serverTimestamp } from "firebase/firestore";
 import type { Employee, AssignedTask, Resource, DailyLog } from "@/lib/types";
+
+async function logVisitor(employee: Employee) {
+  try {
+    // We can use a free, simple API to get the user's IP address.
+    const ipResponse = await fetch('https://api.ipify.org?format=json');
+    const ipData = await ipResponse.json();
+    
+    await addDoc(collection(db, "visitorLogs"), {
+      employeeId: employee.id,
+      employeeName: employee.name,
+      employeeEmail: employee.email,
+      loginTime: serverTimestamp(),
+      ipAddress: ipData.ip,
+      userAgent: navigator.userAgent,
+    });
+  } catch (error) {
+    console.error("Failed to log visitor:", error);
+  }
+}
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -34,6 +53,9 @@ export default function DashboardPage() {
           if (userDocSnap.exists()) {
               const empData = { id: userDocSnap.id, ...userDocSnap.data() } as Employee;
               setEmployeeData(empData);
+              
+              // Log the visitor session
+              logVisitor(empData);
 
               // Fetch assigned tasks
               const tasksCollection = collection(db, "tasks");

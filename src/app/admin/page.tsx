@@ -7,7 +7,7 @@ import { Leaderboard } from "@/components/admin/leaderboard";
 import { TaskAssignmentForm } from "@/components/admin/task-assignment-form";
 import { BroadcastForm } from "@/components/admin/broadcast-form";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, Trophy, ClipboardEdit, Loader2, UserPlus, BookCopy } from "lucide-react";
+import { Users, Trophy, ClipboardEdit, Loader2, UserPlus, BookCopy, BarChart4 } from "lucide-react";
 import { auth, db } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -16,6 +16,7 @@ import { AddUserForm } from "@/components/admin/add-user-form";
 import { collection, getDocs, query, where, onSnapshot, orderBy, limit, doc, getDoc } from "firebase/firestore";
 import type { Employee, PerformanceData, Resource, DailyLog } from "@/lib/types";
 import { ResourceManager } from "@/components/admin/resource-manager";
+import { VisitorAnalytics } from "@/components/admin/visitor-analytics";
 
 export default function AdminPage() {
   const router = useRouter();
@@ -62,24 +63,22 @@ export default function AdminPage() {
     
     // Subscribe to all users to get employee list
     const usersCollection = collection(db, "users");
-    const unsubscribeEmployees = onSnapshot(usersCollection, async (snapshot) => {
-      const allUsers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Employee));
-      const employeeList = allUsers.filter(user => user.role === 'employee');
+    const qUsers = query(usersCollection, where("role", "==", "employee"));
+    const unsubscribeEmployees = onSnapshot(qUsers, async (snapshot) => {
+      const employeeList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Employee));
       setEmployees(employeeList);
 
       // Fetch performance data for the leaderboard when employees are loaded/updated
-      if (allUsers.length > 0) {
-        const perfDataPromises = allUsers
-          .filter(u => u.role === 'employee')
-          .map(async (employee) => {
+      if (employeeList.length > 0) {
+        const perfDataPromises = employeeList.map(async (employee) => {
             const logsCollection = collection(db, "dailyLogs");
-            const q = query(
+            const qLogs = query(
               logsCollection,
               where("employeeId", "==", employee.id),
               orderBy("date", "desc"),
               limit(1) // Get the most recent log
             );
-            const logSnapshot = await getDocs(q);
+            const logSnapshot = await getDocs(qLogs);
             if (!logSnapshot.empty) {
               const lastLog = logSnapshot.docs[0].data() as DailyLog;
               return {
@@ -100,7 +99,7 @@ export default function AdminPage() {
         });
 
         const perfDataResults = await Promise.all(perfDataPromises);
-        setPerformanceData(perfDataResults.filter(Boolean) as PerformanceData[]);
+        setPerformanceData(perfDataResults);
       }
     }, (error) => {
       console.error("Error fetching users in real-time:", error);
@@ -154,8 +153,8 @@ export default function AdminPage() {
       <PageHeader title="Admin Panel" user={currentUser} />
       <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
         <Tabs defaultValue="performance" className="w-full">
-          <TabsList className="grid w-full grid-cols-5">
-             <TabsTrigger value="performance">
+          <TabsList className="grid w-full grid-cols-6">
+            <TabsTrigger value="performance">
               <Users className="mr-2 h-4 w-4" />
               Employee Performance
             </TabsTrigger>
@@ -174,6 +173,10 @@ export default function AdminPage() {
              <TabsTrigger value="resources">
               <BookCopy className="mr-2 h-4 w-4" />
               Resources
+            </TabsTrigger>
+            <TabsTrigger value="analytics">
+              <BarChart4 className="mr-2 h-4 w-4" />
+              Visitor Analytics
             </TabsTrigger>
           </TabsList>
           
@@ -228,6 +231,10 @@ export default function AdminPage() {
 
            <TabsContent value="resources" className="mt-4">
             <ResourceManager initialResources={resources} />
+          </TabsContent>
+
+          <TabsContent value="analytics" className="mt-4">
+            <VisitorAnalytics />
           </TabsContent>
         </Tabs>
       </main>
