@@ -8,7 +8,7 @@ import { Leaderboard } from "@/components/admin/leaderboard";
 import { TaskAssignmentForm } from "@/components/admin/task-assignment-form";
 import { BroadcastForm } from "@/components/admin/broadcast-form";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, Trophy, ClipboardEdit } from "lucide-react";
+import { Users, Trophy, ClipboardEdit, Loader2 } from "lucide-react";
 import { auth } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -18,18 +18,19 @@ export default function AdminPage() {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [isAuthorized, setIsAuthorized] = useState(false);
 
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged((user) => {
-      if (user) {
-        if (user.email === 'taliyotechnologies@gmail.com') {
-          setUser(user);
-          setIsAuthorized(true);
+    const unsubscribe = auth.onAuthStateChanged((currentUser) => {
+      if (currentUser) {
+        // User is signed in.
+        if (currentUser.email === 'taliyotechnologies@gmail.com') {
+          setUser(currentUser);
         } else {
+          // If a non-admin user tries to access, redirect them.
           router.push('/dashboard');
         }
       } else {
+        // No user is signed in, redirect to login page.
         router.push('/');
       }
       setLoading(false);
@@ -39,10 +40,11 @@ export default function AdminPage() {
   }, [router]);
 
 
-  if (loading || !isAuthorized) {
+  if (loading || !user) {
     return (
       <div className="flex min-h-screen w-full flex-col items-center justify-center">
-        <p>Loading...</p>
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <p className="mt-4 text-muted-foreground">Loading Admin Panel...</p>
       </div>
     );
   }

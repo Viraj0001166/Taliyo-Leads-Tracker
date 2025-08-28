@@ -10,6 +10,7 @@ import { auth } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import type { User } from 'firebase/auth';
+import { Loader2 } from "lucide-react";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -17,9 +18,9 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged((user) => {
-      if (user) {
-        setUser(user);
+    const unsubscribe = auth.onAuthStateChanged((currentUser) => {
+      if (currentUser) {
+        setUser(currentUser);
       } else {
         router.push('/');
       }
@@ -32,7 +33,8 @@ export default function DashboardPage() {
   if (loading || !user) {
     return (
       <div className="flex min-h-screen w-full flex-col items-center justify-center">
-        <p>Loading...</p>
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <p className="mt-4 text-muted-foreground">Loading Dashboard...</p>
       </div>
     );
   }
