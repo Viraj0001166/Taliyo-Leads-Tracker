@@ -54,18 +54,20 @@ export default function DashboardPage() {
             
             if (empData.role === 'admin') {
                 router.push('/admin');
-                return;
+                return; // Stop further execution for admins on this page
             }
 
             setEmployeeData(empData);
-            logVisitor(empData);
+            await logVisitor(empData);
+            setLoading(false);
         } else {
+           // If no user doc, they shouldn't be here
            router.push('/');
         }
       } else {
+        // No user logged in
         router.push('/');
       }
-      setLoading(false);
     });
 
     return () => unsubscribe();

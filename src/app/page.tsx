@@ -27,16 +27,8 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      const userDocRef = doc(db, 'users', userCredential.user.uid);
-      const userDocSnap = await getDoc(userDocRef);
-
-      if (userDocSnap.exists() && userDocSnap.data().role === 'admin') {
-        router.push('/admin');
-      } else {
-        router.push('/dashboard');
-      }
-
+      await signInWithEmailAndPassword(auth, email, password);
+      router.push('/dashboard');
     } catch (error: any) {
       // ONE-TIME TEMPORARY ADMIN CREATION
       if (error.code === 'auth/user-not-found' && email === 'tempadmin@taliyo.com') {
@@ -54,11 +46,9 @@ export default function LoginPage() {
             avatar: `https://picsum.photos/seed/${user.email}/100/100`,
           });
           
-          toast({ title: "Temporary Admin Created", description: "Redirecting to admin panel..." });
+          toast({ title: "Temporary Admin Created", description: "Log in again to access the admin panel." });
+          // Do not redirect here, let user log in again.
           
-          // Redirect to admin panel immediately after creation
-          router.push('/admin');
-
         } catch (creationError: any) {
           toast({ variant: 'destructive', title: 'Setup Failed', description: creationError.message });
         }
