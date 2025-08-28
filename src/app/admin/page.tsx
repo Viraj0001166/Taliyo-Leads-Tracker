@@ -13,7 +13,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import type { User as FirebaseUser } from 'firebase/auth';
 import { AddUserForm } from "@/components/admin/add-user-form";
-import { collection, getDocs, query, where, onSnapshot, orderBy, limit } from "firebase/firestore";
+import { collection, getDocs, query, where, onSnapshot, orderBy, limit, doc, getDoc } from "firebase/firestore";
 import type { Employee, PerformanceData, Resource, DailyLog } from "@/lib/types";
 import { ResourceManager } from "@/components/admin/resource-manager";
 
@@ -30,23 +30,16 @@ export default function AdminPage() {
     const unsubscribe = auth.onAuthStateChanged(async (currentUser) => {
       if (currentUser) {
         setUser(currentUser);
-        // Check if the user is the hardcoded admin OR if their role is 'admin' in Firestore
-        const userDocQuery = query(collection(db, "users"), where("email", "==", currentUser.email));
         
         try {
-          const userDocSnapshot = await getDocs(userDocQuery);
-          let isAdmin = false;
-          if (!userDocSnapshot.empty) {
-            const userData = userDocSnapshot.docs[0].data();
-            if (userData.role === 'admin') {
-              isAdmin = true;
-            }
-          }
+          // Check if the user has an 'admin' role in Firestore.
+          const userDocRef = doc(db, "users", currentUser.uid);
+          const userDocSnapshot = await getDoc(userDocRef);
 
-          if (currentUser.email === 'taliyotechnologies@gmail.com' || isAdmin) {
+          if (userDocSnapshot.exists() && userDocSnapshot.data().role === 'admin') {
             setIsAuthorized(true);
           } else {
-            // Not an admin, redirect to employee dashboard
+             // Not an admin, redirect to employee dashboard
             router.push('/dashboard');
           }
         } catch (error) {
@@ -67,6 +60,7 @@ export default function AdminPage() {
   useEffect(() => {
     if (!isAuthorized) return;
     
+    // Subscribe to all users to get employee list
     const usersCollection = collection(db, "users");
     const unsubscribeEmployees = onSnapshot(usersCollection, async (snapshot) => {
       const allUsers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Employee));
@@ -74,27 +68,35 @@ export default function AdminPage() {
       setEmployees(employeeList);
 
       // Fetch performance data for the leaderboard when employees are loaded/updated
-      if (employeeList.length > 0) {
-        const perfDataPromises = employeeList.map(async (employee) => {
-          const logsCollection = collection(db, "dailyLogs");
-          const q = query(
-            logsCollection,
-            where("employeeId", "==", employee.id),
-            orderBy("date", "desc"),
-            limit(1) // Get the most recent log
-          );
-          const logSnapshot = await getDocs(q);
-          if (!logSnapshot.empty) {
-            const lastLog = logSnapshot.docs[0].data() as DailyLog;
+      if (allUsers.length > 0) {
+        const perfDataPromises = allUsers
+          .filter(u => u.role === 'employee')
+          .map(async (employee) => {
+            const logsCollection = collection(db, "dailyLogs");
+            const q = query(
+              logsCollection,
+              where("employeeId", "==", employee.id),
+              orderBy("date", "desc"),
+              limit(1) // Get the most recent log
+            );
+            const logSnapshot = await getDocs(q);
+            if (!logSnapshot.empty) {
+              const lastLog = logSnapshot.docs[0].data() as DailyLog;
+              return {
+                employeeName: employee.name,
+                linkedinConnections: lastLog.linkedinConnections,
+                followUps: lastLog.followUps,
+                coldEmails: lastLog.coldEmails,
+                leadsGenerated: lastLog.leadsGenerated,
+              };
+            }
             return {
               employeeName: employee.name,
-              linkedinConnections: lastLog.linkedinConnections,
-              followUps: lastLog.followUps,
-              coldEmails: lastLog.coldEmails,
-              leadsGenerated: lastLog.leadsGenerated,
+              linkedinConnections: 0,
+              followUps: 0,
+              coldEmails: 0,
+              leadsGenerated: 0,
             };
-          }
-          return null;
         });
 
         const perfDataResults = await Promise.all(perfDataPromises);
