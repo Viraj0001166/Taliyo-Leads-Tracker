@@ -13,8 +13,8 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import type { User as FirebaseUser } from 'firebase/auth';
 import { AddUserForm } from "@/components/admin/add-user-form";
-import { collection, getDocs, query, where, onSnapshot } from "firebase/firestore";
-import type { Employee, PerformanceData, Resource } from "@/lib/types";
+import { collection, getDocs, query, where, onSnapshot, orderBy, limit } from "firebase/firestore";
+import type { Employee, PerformanceData, Resource, DailyLog } from "@/lib/types";
 import { ResourceManager } from "@/components/admin/resource-manager";
 
 export default function AdminPage() {
@@ -67,13 +67,39 @@ export default function AdminPage() {
   useEffect(() => {
     if (!isAuthorized) return;
     
-    // Subscribe to all users and filter for employees on the client side.
-    // This is simpler and less prone to Firestore security rule issues.
     const usersCollection = collection(db, "users");
-    const unsubscribeEmployees = onSnapshot(usersCollection, (snapshot) => {
+    const unsubscribeEmployees = onSnapshot(usersCollection, async (snapshot) => {
       const allUsers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Employee));
       const employeeList = allUsers.filter(user => user.role === 'employee');
       setEmployees(employeeList);
+
+      // Fetch performance data for the leaderboard when employees are loaded/updated
+      if (employeeList.length > 0) {
+        const perfDataPromises = employeeList.map(async (employee) => {
+          const logsCollection = collection(db, "dailyLogs");
+          const q = query(
+            logsCollection,
+            where("employeeId", "==", employee.id),
+            orderBy("date", "desc"),
+            limit(1) // Get the most recent log
+          );
+          const logSnapshot = await getDocs(q);
+          if (!logSnapshot.empty) {
+            const lastLog = logSnapshot.docs[0].data() as DailyLog;
+            return {
+              employeeName: employee.name,
+              linkedinConnections: lastLog.linkedinConnections,
+              followUps: lastLog.followUps,
+              coldEmails: lastLog.coldEmails,
+              leadsGenerated: lastLog.leadsGenerated,
+            };
+          }
+          return null;
+        });
+
+        const perfDataResults = await Promise.all(perfDataPromises);
+        setPerformanceData(perfDataResults.filter(Boolean) as PerformanceData[]);
+      }
     }, (error) => {
       console.error("Error fetching users in real-time:", error);
     });
@@ -125,7 +151,7 @@ export default function AdminPage() {
     <div className="flex min-h-screen w-full flex-col">
       <PageHeader title="Admin Panel" user={currentUser} />
       <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
-        <Tabs defaultValue="users" className="w-full">
+        <Tabs defaultValue="performance" className="w-full">
           <TabsList className="grid w-full grid-cols-5">
              <TabsTrigger value="performance">
               <Users className="mr-2 h-4 w-4" />
