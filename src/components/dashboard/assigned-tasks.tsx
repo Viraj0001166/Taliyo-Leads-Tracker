@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from 'react';
@@ -5,18 +6,43 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import type { AssignedTask } from "@/lib/types";
+import { db } from '@/lib/firebase';
+import { doc, updateDoc } from 'firebase/firestore';
+import { useToast } from '@/hooks/use-toast';
 
 interface AssignedTasksProps {
   tasks: AssignedTask[];
 }
 
 export function AssignedTasks({ tasks }: AssignedTasksProps) {
+  const { toast } = useToast();
   const [taskStatus, setTaskStatus] = React.useState<Record<string, boolean>>(
     tasks.reduce((acc, task) => ({ ...acc, [task.id]: task.isCompleted }), {})
   );
 
-  const handleCheckedChange = (taskId: string) => {
-    setTaskStatus(prev => ({ ...prev, [taskId]: !prev[taskId] }));
+  const handleCheckedChange = async (taskId: string) => {
+    const newStatus = !taskStatus[taskId];
+    setTaskStatus(prev => ({ ...prev, [taskId]: newStatus }));
+
+    try {
+      const taskDocRef = doc(db, "tasks", taskId);
+      await updateDoc(taskDocRef, {
+        isCompleted: newStatus
+      });
+       toast({
+        title: "Task Updated",
+        description: `Task status has been changed.`,
+      });
+    } catch (error) {
+      console.error("Error updating task status:", error);
+      // Revert UI change on error
+      setTaskStatus(prev => ({ ...prev, [taskId]: !newStatus }));
+      toast({
+        variant: "destructive",
+        title: "Update Failed",
+        description: "Could not update task status.",
+      });
+    }
   };
 
   return (

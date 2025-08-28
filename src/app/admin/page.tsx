@@ -2,31 +2,44 @@
 'use client';
 import { PageHeader } from "@/components/common/page-header";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { employees, performanceData } from "@/lib/data";
 import { EmployeePerformance } from "@/components/admin/employee-performance";
 import { Leaderboard } from "@/components/admin/leaderboard";
 import { TaskAssignmentForm } from "@/components/admin/task-assignment-form";
 import { BroadcastForm } from "@/components/admin/broadcast-form";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, Trophy, ClipboardEdit, Loader2, UserPlus } from "lucide-react";
-import { auth } from '@/lib/firebase';
+import { auth, db } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import type { User } from 'firebase/auth';
+import type { User as FirebaseUser } from 'firebase/auth';
 import { AddUserForm } from "@/components/admin/add-user-form";
+import { collection, getDocs, query, where } from "firebase/firestore";
+import type { Employee, PerformanceData } from "@/lib/types";
 
 export default function AdminPage() {
   const router = useRouter();
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<FirebaseUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [isAuthorized, setIsAuthorized] = useState(false);
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [performanceData, setPerformanceData] = useState<PerformanceData[]>([]);
 
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged((currentUser) => {
+    const unsubscribe = auth.onAuthStateChanged(async (currentUser) => {
       if (currentUser) {
         if (currentUser.email === 'taliyotechnologies@gmail.com') {
           setUser(currentUser);
           setIsAuthorized(true);
+          // Fetch employees and performance data
+          try {
+            const usersCollection = collection(db, "users");
+            const q = query(usersCollection, where("role", "==", "employee"));
+            const userSnapshot = await getDocs(q);
+            const employeeList = userSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Employee));
+            setEmployees(employeeList);
+          } catch(e) {
+            console.error("Error fetching employees", e);
+          }
         } else {
           // Not an admin, redirect to employee dashboard
           router.push('/dashboard');

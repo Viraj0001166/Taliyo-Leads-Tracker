@@ -1,8 +1,10 @@
+
 export interface Employee {
-  id: string;
+  id: string; // This will be the Firebase Auth UID
   name: string;
   email: string;
   avatar: string;
+  role: 'employee' | 'admin';
 }
 
 export interface DailyLog {
@@ -22,6 +24,10 @@ export interface AssignedTask {
   task: string;
   assignedBy: string;
   isCompleted: boolean;
+  assignedAt: {
+      seconds: number,
+      nanoseconds: number
+  };
 }
 
 export interface Resource {

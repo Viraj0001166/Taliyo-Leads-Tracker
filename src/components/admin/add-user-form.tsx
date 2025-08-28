@@ -25,7 +25,8 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, UserPlus } from 'lucide-react';
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
+import { auth, db } from '@/lib/firebase';
+import { doc, setDoc } from 'firebase/firestore';
 
 const formSchema = z.object({
   firstName: z.string().min(1, { message: 'First name is required.' }),
@@ -55,11 +56,24 @@ export function AddUserForm() {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setLoading(true);
     try {
+      // Note: This creates the user in Firebase Auth.
+      // For a real app, you might use a Cloud Function to handle user creation
+      // to avoid exposing user creation logic on the client.
       const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
       
       const user = userCredential.user;
       const displayName = `${values.firstName} ${values.lastName}`;
+      
+      // Update Firebase Auth profile
       await updateProfile(user, { displayName });
+
+      // Create a corresponding document in Firestore 'users' collection
+      await setDoc(doc(db, "users", user.uid), {
+        name: displayName,
+        email: values.email,
+        role: values.role,
+        avatar: `https://picsum.photos/seed/${values.email}/100/100`,
+      });
 
       toast({
         title: 'User Created Successfully!',
@@ -71,7 +85,9 @@ export function AddUserForm() {
       toast({
         variant: 'destructive',
         title: 'Failed to Create User',
-        description: error.message || 'An unexpected error occurred.',
+        description: error.code === 'auth/email-already-in-use'
+          ? 'This email is already registered.'
+          : error.message || 'An unexpected error occurred.',
       });
     } finally {
       setLoading(false);
