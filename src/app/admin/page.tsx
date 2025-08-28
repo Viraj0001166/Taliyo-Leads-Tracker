@@ -33,26 +33,21 @@ export default function AdminPage() {
         setUser(currentUser);
         
         try {
-          // Check if the user has an 'admin' role in Firestore.
           const userDocRef = doc(db, "users", currentUser.uid);
           const userDocSnapshot = await getDoc(userDocRef);
 
           if (userDocSnapshot.exists() && userDocSnapshot.data().role === 'admin') {
             setIsAuthorized(true);
           } else {
-             // Not an admin, redirect to employee dashboard
             router.push('/dashboard');
           }
         } catch (error) {
             console.error("Error checking admin status:", error);
-            // If we can't check, assume not authorized and redirect.
             router.push('/dashboard');
         }
       } else {
-        // No user logged in, redirect to login page
         router.push('/');
       }
-      // We only stop loading after we've confirmed auth status
       setLoading(false);
     });
 
@@ -62,7 +57,6 @@ export default function AdminPage() {
   useEffect(() => {
     if (!isAuthorized) return;
     
-    // Subscribe to all users to get employee list
     const usersCollection = collection(db, "users");
     const qUsers = query(usersCollection, where("role", "==", "employee"));
     const unsubscribeEmployees = onSnapshot(qUsers, (snapshot) => {
@@ -72,7 +66,6 @@ export default function AdminPage() {
       console.error("Error fetching users in real-time:", error);
     });
 
-    // Subscribe to resources
     const resourcesCollection = collection(db, "resources");
     const unsubscribeResources = onSnapshot(resourcesCollection, (snapshot) => {
         const resourceList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Resource));
@@ -88,7 +81,6 @@ export default function AdminPage() {
 
   }, [isAuthorized]);
 
-  // Fetch performance data for all employees when the employee list changes
   useEffect(() => {
     if (employees.length === 0) return;
 
@@ -99,7 +91,7 @@ export default function AdminPage() {
               logsCollection,
               where("employeeId", "==", employee.id),
               orderBy("date", "desc"),
-              limit(1) // Get the most recent log
+              limit(1) 
             );
             const logSnapshot = await getDocs(qLogs);
             if (!logSnapshot.empty) {
@@ -130,27 +122,15 @@ export default function AdminPage() {
   }, [employees]);
 
 
-  // Render loading state
-  if (loading) {
+  if (loading || !isAuthorized) {
     return (
       <div className="flex min-h-screen w-full flex-col items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        <p className="mt-4 text-muted-foreground">Loading Admin Panel...</p>
+        <p className="mt-4 text-muted-foreground">{!isAuthorized && !loading ? 'Redirecting...' : 'Loading Admin Panel...'}</p>
       </div>
     );
   }
 
-  // Render redirecting/unauthorized state
-  if (!isAuthorized) {
-    return (
-       <div className="flex min-h-screen w-full flex-col items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        <p className="mt-4 text-muted-foreground">Redirecting...</p>
-      </div>
-    );
-  }
-
-  // If loading is false and user is authorized, render the admin panel
   const currentUser = {
     name: user?.displayName || "Admin",
     email: user?.email || "",

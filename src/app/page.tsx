@@ -1,9 +1,9 @@
 
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile, onAuthStateChanged } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
@@ -21,14 +21,40 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [authLoading, setAuthLoading] = useState(true);
+
+  useEffect(() => {
+    // If a user is already logged in, redirect them away from the login page.
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        // User is signed in, see docs for a list of available properties
+        // https://firebase.google.com/docs/reference/js/firebase.User
+        const userDocRef = doc(db, 'users', user.uid);
+        const userDocSnap = await getDoc(userDocRef);
+        if (userDocSnap.exists() && userDocSnap.data().role === 'admin') {
+            router.push('/admin');
+        } else {
+            router.push('/dashboard');
+        }
+      } else {
+        // User is signed out, so they can stay on the login page.
+        setAuthLoading(false);
+      }
+    });
+
+    // Cleanup subscription on unmount
+    return () => unsubscribe();
+  }, [router]);
+
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
+      // This just signs the user in. The useEffect handles the redirect.
       await signInWithEmailAndPassword(auth, email, password);
-      router.push('/dashboard');
+       toast({ title: "Login Successful", description: "Redirecting..." });
     } catch (error: any) {
       // ONE-TIME TEMPORARY ADMIN CREATION
       if (error.code === 'auth/user-not-found' && email === 'tempadmin@taliyo.com') {
@@ -46,8 +72,8 @@ export default function LoginPage() {
             avatar: `https://picsum.photos/seed/${user.email}/100/100`,
           });
           
-          toast({ title: "Temporary Admin Created", description: "Log in again to access the admin panel." });
-          // Do not redirect here, let user log in again.
+          toast({ title: "Temporary Admin Created", description: "Please log in with the temporary credentials." });
+          // Let the user log in again to trigger the auth state change.
           
         } catch (creationError: any) {
           toast({ variant: 'destructive', title: 'Setup Failed', description: creationError.message });
@@ -64,6 +90,15 @@ export default function LoginPage() {
       setLoading(false);
     }
   };
+
+  if (authLoading) {
+      return (
+        <div className="flex min-h-screen w-full flex-col items-center justify-center">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <p className="mt-4 text-muted-foreground">Initializing...</p>
+        </div>
+      )
+  }
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center bg-background p-8">

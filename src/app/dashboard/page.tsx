@@ -15,7 +15,6 @@ import type { Employee, AssignedTask, Resource, DailyLog } from "@/lib/types";
 
 async function logVisitor(employee: Employee) {
   try {
-    // We can use a free, simple API to get the user's IP address.
     const ipResponse = await fetch('https://api.ipify.org?format=json');
     const ipData = await ipResponse.json();
     
@@ -54,18 +53,16 @@ export default function DashboardPage() {
             
             if (empData.role === 'admin') {
                 router.push('/admin');
-                return; // Stop further execution for admins on this page
+                return; 
             }
 
             setEmployeeData(empData);
             await logVisitor(empData);
             setLoading(false);
         } else {
-           // If no user doc, they shouldn't be here
            router.push('/');
         }
       } else {
-        // No user logged in
         router.push('/');
       }
     });
@@ -76,14 +73,12 @@ export default function DashboardPage() {
   useEffect(() => {
     if (!employeeData) return;
 
-    // Listener for tasks
     const tasksCollection = collection(db, "tasks");
     const tasksQuery = query(tasksCollection, where("employeeId", "==", employeeData.id));
     const unsubscribeTasks = onSnapshot(tasksQuery, (snapshot) => {
         setAssignedTasks(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AssignedTask)));
     });
 
-    // Listener for daily logs
     const logsCollection = collection(db, "dailyLogs");
     const logsQuery = query(
       logsCollection, 
@@ -95,7 +90,6 @@ export default function DashboardPage() {
         setDailyLogs(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as DailyLog)).reverse());
     });
 
-    // Listener for resources
     const resourcesCollection = collection(db, "resources");
     const unsubscribeResources = onSnapshot(resourcesCollection, (snapshot) => {
         setResources(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Resource)));
