@@ -33,7 +33,7 @@ export default function LoginPage() {
       });
 
       // Simple role check based on email
-      if (email === 'admin@leadtrack.pulse') {
+      if (email === 'taliyotechnologies@gmail.com') {
         router.push('/admin');
       } else {
         router.push('/dashboard');

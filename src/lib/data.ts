@@ -1,8 +1,9 @@
+
 import type { Employee, DailyLog, AssignedTask, Resource, PerformanceData } from './types';
 
 export const employees: Employee[] = [
   { id: '1', name: 'Aarav Sharma', email: 'aarav.sharma@example.com', avatar: 'https://picsum.photos/id/1005/100/100' },
-  { id: '2', name: 'Priya Patel', email: 'priya.patel@example.com', avatar: 'https://picsum.photos/id/1011/100/100' },
+  { id: '2', name: 'Viraj Srivastav', email: 'virajsrivastav016@gmail.com', avatar: 'https://picsum.photos/id/1011/100/100' },
   { id: '3', name: 'Rohan Mehta', email: 'rohan.mehta@example.com', avatar: 'https://picsum.photos/id/1012/100/100' },
   { id: '4', name: 'Sneha Reddy', email: 'sneha.reddy@example.com', avatar: 'https://picsum.photos/id/1027/100/100' },
 ];
@@ -18,7 +19,7 @@ export const dailyLogs: DailyLog[] = [
     coldEmails: Math.floor(Math.random() * 30) + 40,
     leadsGenerated: Math.floor(Math.random() * 5) + 1,
   })),
-  // Logs for Priya Patel (employee 2)
+  // Logs for Viraj Srivastav (employee 2)
   ...Array.from({ length: 7 }, (_, i) => ({
     id: `log2_${i}`,
     employeeId: '2',
@@ -65,7 +66,7 @@ export const resources: Resource[] = [
 
 export const performanceData: PerformanceData[] = [
   { employeeName: 'Aarav Sharma', linkedinConnections: 250, followUps: 180, coldEmails: 350, leadsGenerated: 25 },
-  { employeeName: 'Priya Patel', linkedinConnections: 300, followUps: 220, coldEmails: 310, leadsGenerated: 35 },
+  { employeeName: 'Viraj Srivastav', linkedinConnections: 300, followUps: 220, coldEmails: 310, leadsGenerated: 35 },
   { employeeName: 'Rohan Mehta', linkedinConnections: 220, followUps: 150, coldEmails: 300, leadsGenerated: 20 },
   { employeeName: 'Sneha Reddy', linkedinConnections: 280, followUps: 200, coldEmails: 380, leadsGenerated: 30 },
 ];

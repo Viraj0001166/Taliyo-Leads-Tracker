@@ -22,7 +22,7 @@ export default function AdminPage() {
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((user) => {
       if (user) {
-        if (user.email === 'admin@leadtrack.pulse') {
+        if (user.email === 'taliyotechnologies@gmail.com') {
           setUser(user);
         } else {
           router.push('/dashboard');
