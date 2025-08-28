@@ -30,19 +30,21 @@ export default function LoginPage() {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
-      toast({
-        title: "Login Successful",
-        description: `Welcome back, ${user.email}`,
-      });
-      
+      // Check the user's role from Firestore to determine where to redirect.
       const userDocRef = doc(db, "users", user.uid);
       const userDoc = await getDoc(userDocRef);
       
+      let destination = '/dashboard'; // Default to employee dashboard
       if (userDoc.exists() && userDoc.data().role === 'admin') {
-          router.push('/admin');
-      } else {
-          router.push('/dashboard');
+          destination = '/admin'; // Set to admin panel if role is 'admin'
       }
+      
+      toast({
+        title: "Login Successful",
+        description: `Welcome back! Redirecting you now...`,
+      });
+      
+      router.push(destination);
 
     } catch (error: any) {
       console.error("Firebase Auth Error:", error);

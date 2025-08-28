@@ -10,7 +10,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import type { User as FirebaseUser } from 'firebase/auth';
 import { Loader2 } from "lucide-react";
-import { collection, query, where, getDocs, doc, getDoc, limit, addDoc, serverTimestamp } from "firebase/firestore";
+import { collection, query, where, getDocs, doc, getDoc, limit, addDoc, serverTimestamp, orderBy } from "firebase/firestore";
 import type { Employee, AssignedTask, Resource, DailyLog } from "@/lib/types";
 
 async function logVisitor(employee: Employee) {
@@ -47,14 +47,23 @@ export default function DashboardPage() {
         setUser(currentUser);
         
         try {
-          // Fetch employee data
+          // Fetch employee data and check role
           const userDocRef = doc(db, 'users', currentUser.uid);
           const userDocSnap = await getDoc(userDocRef);
+
           if (userDocSnap.exists()) {
               const empData = { id: userDocSnap.id, ...userDocSnap.data() } as Employee;
+              
+              // If user is an admin, redirect them to the admin panel
+              if (empData.role === 'admin') {
+                  router.push('/admin');
+                  // No need to fetch employee data, just exit
+                  return; 
+              }
+
               setEmployeeData(empData);
               
-              // Log the visitor session
+              // Log the visitor session for employees
               logVisitor(empData);
 
               // Fetch assigned tasks
@@ -63,26 +72,38 @@ export default function DashboardPage() {
               const tasksSnapshot = await getDocs(tasksQuery);
               setAssignedTasks(tasksSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AssignedTask)));
 
-              // Fetch daily logs for the last 7 days
+              // Fetch daily logs for the last 7 days for the chart
               const logsCollection = collection(db, "dailyLogs");
-              const logsQuery = query(logsCollection, where("employeeId", "==", empData.id), limit(7));
+              const logsQuery = query(
+                logsCollection, 
+                where("employeeId", "==", empData.id),
+                orderBy("date", "desc"), 
+                limit(7)
+              );
               const logsSnapshot = await getDocs(logsQuery);
-              setDailyLogs(logsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as DailyLog)));
+              // Reverse to show oldest first on the chart
+              setDailyLogs(logsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as DailyLog)).reverse());
+          } else {
+            // If user doc doesn't exist, they can't be an employee
+             router.push('/');
+             return;
           }
 
-          // Fetch resources
+          // Fetch resources for all users
           const resourcesCollection = collection(db, "resources");
           const resourcesSnapshot = await getDocs(resourcesCollection);
           setResources(resourcesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Resource)));
 
         } catch (error) {
             console.error("Failed to fetch dashboard data:", error);
+        } finally {
+            setLoading(false);
         }
 
       } else {
         router.push('/');
+        setLoading(false);
       }
-      setLoading(false);
     });
 
     return () => unsubscribe();

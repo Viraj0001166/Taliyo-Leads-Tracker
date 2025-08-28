@@ -52,6 +52,7 @@ export default function AdminPage() {
         // No user logged in, redirect to login page
         router.push('/');
       }
+      // We only stop loading after we've confirmed auth status
       setLoading(false);
     });
 
@@ -64,13 +65,35 @@ export default function AdminPage() {
     // Subscribe to all users to get employee list
     const usersCollection = collection(db, "users");
     const qUsers = query(usersCollection, where("role", "==", "employee"));
-    const unsubscribeEmployees = onSnapshot(qUsers, async (snapshot) => {
+    const unsubscribeEmployees = onSnapshot(qUsers, (snapshot) => {
       const employeeList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Employee));
       setEmployees(employeeList);
+    }, (error) => {
+      console.error("Error fetching users in real-time:", error);
+    });
 
-      // Fetch performance data for the leaderboard when employees are loaded/updated
-      if (employeeList.length > 0) {
-        const perfDataPromises = employeeList.map(async (employee) => {
+    // Subscribe to resources
+    const resourcesCollection = collection(db, "resources");
+    const unsubscribeResources = onSnapshot(resourcesCollection, (snapshot) => {
+        const resourceList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Resource));
+        setResources(resourceList);
+    }, (error) => {
+        console.error("Error fetching resources in real-time:", error);
+    });
+
+    return () => {
+        unsubscribeEmployees();
+        unsubscribeResources();
+    };
+
+  }, [isAuthorized]);
+
+  // Fetch performance data for all employees when the employee list changes
+  useEffect(() => {
+    if (employees.length === 0) return;
+
+    const fetchPerformanceData = async () => {
+        const perfDataPromises = employees.map(async (employee) => {
             const logsCollection = collection(db, "dailyLogs");
             const qLogs = query(
               logsCollection,
@@ -100,26 +123,12 @@ export default function AdminPage() {
 
         const perfDataResults = await Promise.all(perfDataPromises);
         setPerformanceData(perfDataResults);
-      }
-    }, (error) => {
-      console.error("Error fetching users in real-time:", error);
-    });
-
-    // Subscribe to resources
-    const resourcesCollection = collection(db, "resources");
-    const unsubscribeResources = onSnapshot(resourcesCollection, (snapshot) => {
-        const resourceList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Resource));
-        setResources(resourceList);
-    }, (error) => {
-        console.error("Error fetching resources in real-time:", error);
-    });
-
-    return () => {
-        unsubscribeEmployees();
-        unsubscribeResources();
     };
 
-  }, [isAuthorized]);
+    fetchPerformanceData();
+
+  }, [employees]);
+
 
   // Render loading state
   if (loading) {
