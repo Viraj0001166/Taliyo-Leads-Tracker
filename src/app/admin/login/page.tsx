@@ -63,20 +63,20 @@ export default function AdminLoginPage() {
         });
       }
     } catch (error: any) {
-       if (error.code === 'auth/user-not-found' && email.toLowerCase() === 'tempadmin@taliyo.com') {
+       if (error.code === 'auth/user-not-found' && email.toLowerCase() === 'taliyotechnologies@gmail.com') {
         try {
           const userCredential = await createUserWithEmailAndPassword(auth, email, password);
           const user = userCredential.user;
 
-          await updateProfile(user, { displayName: 'Temporary Admin' });
+          await updateProfile(user, { displayName: 'Admin' });
           await setDoc(doc(db, 'users', user.uid), {
-            name: 'Temporary Admin',
+            name: 'Admin',
             email: user.email,
             role: 'admin',
             avatar: `https://picsum.photos/seed/${user.email}/100/100`,
           });
           
-          toast({ title: "Temporary Admin Created", description: "Login successful. Redirecting..." });
+          toast({ title: "Admin Account Created", description: "Login successful. Redirecting..." });
           router.push('/admin');
           
         } catch (creationError: any) {
