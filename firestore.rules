@@ -1,0 +1,37 @@
+
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Allow read access to any authenticated user for all collections
+    match /{document=**} {
+      allow read: if request.auth != null;
+    }
+    
+    // Allow users to create their own documents in most collections
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow create; // Allow creating user documents
+    }
+
+    match /dailyLogs/{logId} {
+      allow create: if request.auth != null;
+      allow write: if request.auth != null && request.resource.data.employeeId == request.auth.uid;
+    }
+    
+    match /visitorLogs/{logId} {
+       allow create: if request.auth != null;
+    }
+
+    match /tasks/{taskId} {
+        allow read: if request.auth != null;
+        allow write: if request.auth != null; // Admins can write, employees update
+    }
+
+    match /resources/{resourceId} {
+        allow read: if request.auth != null;
+        allow write: if request.auth != null; // Admins can create/update
+    }
+  }
+}
