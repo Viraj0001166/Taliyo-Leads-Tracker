@@ -2,41 +2,68 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Admins can manage any document
-    match /{document=**} {
-      allow read, write: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+
+    // Helper function to check if the user is an admin
+    function isAdmin() {
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
-    // Logged-in employees can read specific collections
-    // and create their own logs.
+    // Helper function to check if the user is a logged-in employee or admin
+    function isEmployeeOrAdmin() {
+      return request.auth != null && exists(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    // Users collection can be read by any authenticated user (for directories),
+    // but only the user themselves or an admin can update it.
+    // Admins can create new user documents.
     match /users/{userId} {
-      allow read: if request.auth != null;
-      allow create: if request.auth.uid == userId;
-      allow update: if request.auth.uid == userId;
-    }
-    
-    match /tasks/{taskId} {
-      allow read, update: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'employee';
+      allow read: if isEmployeeOrAdmin();
+      allow create: if isAdmin();
+      allow update: if request.auth.uid == userId || isAdmin();
+      allow delete: if isAdmin();
     }
 
+    // Daily logs can be created by any employee.
+    // Reading/updating/deleting logs might be restricted in the future, but is open for now.
     match /dailyLogs/{logId} {
-      allow create: if request.auth != null;
+      allow read, write: if isEmployeeOrAdmin();
     }
 
-    match /visitorLogs/{logId} {
-        allow create: if request.auth != null;
-    }
-
-    match /resources/{resourceId} {
-      allow read: if request.auth != null;
-    }
-    
-    match /announcements/{announcementId} {
-      allow read: if request.auth != null;
+    // Tasks can be read and updated by any employee (to check them off).
+    // Only admins can create or delete tasks.
+    match /tasks/{taskId} {
+      allow read, update: if isEmployeeOrAmdin();
+      allow create, delete: if isAdmin();
     }
     
+    // Fake employees can be read by any authenticated user.
+    // Only admins can create, update or delete them.
     match /fakeEmployees/{employeeId} {
-      allow read: if request.auth != null;
+      allow read: if isEmployeeOrAdmin();
+      allow create, update, delete: if isAdmin();
+    }
+
+    // Resources can be read by any employee.
+    // Only admins can create, update, or delete them.
+    match /resources/{resourceId} {
+      allow read: if isEmployeeOrAdmin();
+      allow create, update, delete: if isAdmin();
+    }
+    
+    // Visitor logs can be created by any employee upon login.
+    // Only admins should be able to read all logs.
+    match /visitorLogs/{logId} {
+       allow create: if isEmployeeOrAdmin();
+       allow read: if isAdmin();
+       allow update, delete: if false; // No one can update or delete
+    }
+
+    // The single 'latest' announcement document can be read by any employee.
+    // Only admins can update it.
+    match /announcements/latest {
+        allow read: if isEmployeeOrAdmin();
+        allow write: if isAdmin();
     }
   }
 }
