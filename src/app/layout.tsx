@@ -3,8 +3,8 @@ import './globals.css';
 import { Toaster } from "@/components/ui/toaster"
 
 export const metadata: Metadata = {
-  title: 'LeadTrack Pulse',
-  description: 'Track employee performance and streamline your workflow with LeadTrack Pulse.',
+  title: 'Taliyo Lead Track',
+  description: 'Track employee performance and streamline your workflow with Taliyo Lead Track.',
 };
 
 export default function RootLayout({

@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
+import Link from 'next/link';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -55,9 +56,9 @@ export default function LoginPage() {
     <main className="flex min-h-screen flex-col items-center justify-center bg-background p-8">
       <div className="flex flex-col items-center justify-center text-center mb-8">
         <div className="bg-primary text-primary-foreground p-3 rounded-full mb-4">
-          <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+          <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 4h14"/><path d="M12 4v16"/></svg>
         </div>
-        <h1 className="text-4xl font-bold text-foreground tracking-tighter">LeadTrack Pulse</h1>
+        <h1 className="text-4xl font-bold text-foreground tracking-tighter">Taliyo Lead Track</h1>
         <p className="text-muted-foreground mt-2 max-w-md">Streamline your team's performance tracking. Log daily tasks, view progress, and stay ahead.</p>
       </div>
 
@@ -99,7 +100,11 @@ export default function LoginPage() {
         </CardContent>
       </Card>
       <footer className="mt-8 text-center text-sm text-muted-foreground">
-        © {new Date().getFullYear()} LeadTrack Pulse. All rights reserved.
+        © {new Date().getFullYear()} Taliyo Lead Track. All rights reserved.
+        <br />
+        <Link href="https://taliyotechnologies.com" target="_blank" rel="noopener noreferrer" className="underline hover:text-primary">
+            Made by Taliyo Technologies
+        </Link>
       </footer>
     </main>
   );
