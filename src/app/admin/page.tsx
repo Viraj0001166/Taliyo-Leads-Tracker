@@ -13,7 +13,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import type { User as FirebaseUser } from 'firebase/auth';
 import { AddUserForm } from "@/components/admin/add-user-form";
-import { collection, getDocs, query, where } from "firebase/firestore";
+import { collection, getDocs, query, where, onSnapshot } from "firebase/firestore";
 import type { Employee, PerformanceData } from "@/lib/types";
 
 export default function AdminPage() {
@@ -27,22 +27,23 @@ export default function AdminPage() {
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(async (currentUser) => {
       if (currentUser) {
-        if (currentUser.email === 'taliyotechnologies@gmail.com') {
-          setUser(currentUser);
-          setIsAuthorized(true);
-          // Fetch employees and performance data
-          try {
-            const usersCollection = collection(db, "users");
-            const q = query(usersCollection, where("role", "==", "employee"));
-            const userSnapshot = await getDocs(q);
-            const employeeList = userSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Employee));
-            setEmployees(employeeList);
-          } catch(e) {
-            console.error("Error fetching employees", e);
+        setUser(currentUser);
+        // Check if the user is the hardcoded admin OR if their role is 'admin' in Firestore
+        const userDocQuery = query(collection(db, "users"), where("email", "==", currentUser.email));
+        const userDocSnapshot = await getDocs(userDocQuery);
+
+        let isAdmin = false;
+        if (!userDocSnapshot.empty) {
+          const userData = userDocSnapshot.docs[0].data();
+          if (userData.role === 'admin') {
+            isAdmin = true;
           }
+        }
+
+        if (currentUser.email === 'taliyotechnologies@gmail.com' || isAdmin) {
+          setIsAuthorized(true);
         } else {
-          // Not an admin, redirect to employee dashboard
-          router.push('/dashboard');
+          router.push('/dashboard'); // Not an admin, redirect to employee dashboard
         }
       } else {
         // No user logged in, redirect to login page
@@ -50,9 +51,28 @@ export default function AdminPage() {
       }
       setLoading(false);
     });
+
     return () => unsubscribe();
   }, [router]);
 
+  useEffect(() => {
+    if (!isAuthorized) return;
+    
+    const usersCollection = collection(db, "users");
+    const q = query(usersCollection, where("role", "==", "employee"));
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const employeeList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Employee));
+      setEmployees(employeeList);
+    }, (error) => {
+      console.error("Error fetching employees in real-time:", error);
+    });
+
+    return () => unsubscribe();
+
+  }, [isAuthorized]);
+
+  // Render loading state
   if (loading) {
     return (
       <div className="flex min-h-screen w-full flex-col items-center justify-center">
@@ -62,8 +82,8 @@ export default function AdminPage() {
     );
   }
 
+  // Render redirecting/unauthorized state
   if (!isAuthorized || !user) {
-    // While redirecting or if unauthorized, render nothing or a loader
     return (
        <div className="flex min-h-screen w-full flex-col items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -72,6 +92,7 @@ export default function AdminPage() {
     );
   }
 
+  // If loading is false and user is authorized, render the admin panel
   const currentUser = {
     name: user.displayName || "Admin",
     email: user.email || "",
@@ -82,9 +103,9 @@ export default function AdminPage() {
     <div className="flex min-h-screen w-full flex-col">
       <PageHeader title="Admin Panel" user={currentUser} />
       <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
-        <Tabs defaultValue="performance" className="w-full">
+        <Tabs defaultValue="users" className="w-full">
           <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="performance">
+             <TabsTrigger value="performance">
               <Users className="mr-2 h-4 w-4" />
               Employee Performance
             </TabsTrigger>
@@ -101,6 +122,20 @@ export default function AdminPage() {
               User Management
             </TabsTrigger>
           </TabsList>
+          
+          <TabsContent value="users" className="mt-4">
+             <Card>
+                <CardHeader>
+                  <CardTitle>Add New User</CardTitle>
+                  <CardDescription>
+                    Create a new employee or admin account. This will create a user in Firebase Auth and a corresponding record in Firestore.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <AddUserForm />
+                </CardContent>
+              </Card>
+          </TabsContent>
 
           <TabsContent value="performance" className="mt-4">
             <EmployeePerformance employees={employees} />
@@ -117,7 +152,7 @@ export default function AdminPage() {
                   <CardTitle>Assign a New Task</CardTitle>
                   <CardDescription>
                     Assign a specific task to an individual employee.
-                  </CardDescription>
+                  </Description>
                 </CardHeader>
                 <CardContent>
                   <TaskAssignmentForm employees={employees} />
@@ -128,26 +163,13 @@ export default function AdminPage() {
                   <CardTitle>Broadcast Notification</CardTitle>
                   <CardDescription>
                     Send a message or notification to all employees at once.
-                  </CardDescription>
+                  </Description>
                 </CardHeader>
                 <CardContent>
                   <BroadcastForm />
                 </CardContent>
               </Card>
             </div>
-          </TabsContent>
-          <TabsContent value="users" className="mt-4">
-             <Card>
-                <CardHeader>
-                  <CardTitle>Add New User</CardTitle>
-                  <CardDescription>
-                    Create a new employee or admin account.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <AddUserForm />
-                </CardContent>
-              </Card>
           </TabsContent>
         </Tabs>
       </main>
