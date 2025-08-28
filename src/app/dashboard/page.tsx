@@ -5,6 +5,7 @@ import { AssignedTasks } from "@/components/dashboard/assigned-tasks";
 import { DailyTaskForm } from "@/components/dashboard/daily-task-form";
 import { Resources } from "@/components/dashboard/resources";
 import { WeeklySummary } from "@/components/dashboard/weekly-summary";
+import { TeamDirectory } from "@/components/dashboard/team-directory";
 import { auth, db } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -38,6 +39,7 @@ export default function DashboardPage() {
   const [assignedTasks, setAssignedTasks] = useState<AssignedTask[]>([]);
   const [resources, setResources] = useState<Resource[]>([]);
   const [dailyLogs, setDailyLogs] = useState<DailyLog[]>([]);
+  const [allEmployees, setAllEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -74,6 +76,13 @@ export default function DashboardPage() {
   useEffect(() => {
     if (!employeeData) return;
 
+    // Listener for all employees for the directory
+    const usersCollection = collection(db, "users");
+    const allUsersQuery = query(usersCollection, where("role", "==", "employee"));
+    const unsubscribeAllEmployees = onSnapshot(allUsersQuery, (snapshot) => {
+        setAllEmployees(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Employee)));
+    });
+
     // Set up real-time listeners for employee-specific data
     const tasksCollection = collection(db, "tasks");
     const tasksQuery = query(tasksCollection, where("employeeId", "==", employeeData.id));
@@ -89,8 +98,16 @@ export default function DashboardPage() {
       limit(7)
     );
     const unsubscribeLogs = onSnapshot(logsQuery, (snapshot) => {
-        setDailyLogs(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as DailyLog)).reverse());
+      try {
+        const logs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as DailyLog));
+        setDailyLogs(logs.reverse());
+      } catch (error) {
+        console.error("Error processing daily logs:", error);
+        // If there's an error (e.g., missing index), you can set logs to empty
+        setDailyLogs([]);
+      }
     });
+
 
     const resourcesCollection = collection(db, "resources");
     const unsubscribeResources = onSnapshot(resourcesCollection, (snapshot) => {
@@ -103,6 +120,7 @@ export default function DashboardPage() {
         unsubscribeTasks();
         unsubscribeLogs();
         unsubscribeResources();
+        unsubscribeAllEmployees();
     };
   }, [employeeData]);
 
@@ -137,6 +155,9 @@ export default function DashboardPage() {
           </div>
           <div className="lg:col-span-2">
             <Resources resources={resources} />
+          </div>
+           <div className="lg:col-span-4">
+            <TeamDirectory employees={allEmployees} />
           </div>
         </div>
       </main>
