@@ -7,7 +7,7 @@ import { Leaderboard } from "@/components/admin/leaderboard";
 import { TaskAssignmentForm } from "@/components/admin/task-assignment-form";
 import { BroadcastForm } from "@/components/admin/broadcast-form";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, Trophy, ClipboardEdit, Loader2, UserPlus, BookCopy, BarChart4 } from "lucide-react";
+import { Users, Trophy, ClipboardEdit, Loader2, UserPlus, BookCopy, BarChart4, Briefcase } from "lucide-react";
 import { auth, db } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, useCallback } from 'react';
@@ -17,6 +17,7 @@ import { collection, onSnapshot, query, where, doc, getDoc } from "firebase/fire
 import type { Employee, PerformanceData, Resource } from "@/lib/types";
 import { ResourceManager } from "@/components/admin/resource-manager";
 import { VisitorAnalytics } from "@/components/admin/visitor-analytics";
+import { FakeEmployeeManager } from "@/components/admin/fake-employee-manager";
 
 export default function AdminPage() {
   const router = useRouter();
@@ -109,7 +110,7 @@ export default function AdminPage() {
       <PageHeader title="Admin Panel" user={currentUser} />
       <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
         <Tabs defaultValue="performance" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-6 h-auto">
+          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 md:grid-cols-7 h-auto">
             <TabsTrigger value="performance" className="flex-wrap">
               <Users className="mr-2 h-4 w-4" />
               Employee Performance
@@ -121,6 +122,10 @@ export default function AdminPage() {
             <TabsTrigger value="tasks">
               <ClipboardEdit className="mr-2 h-4 w-4" />
               Task Management
+            </TabsTrigger>
+             <TabsTrigger value="manage-team">
+              <Briefcase className="mr-2 h-4 w-4" />
+              Manage Team
             </TabsTrigger>
             <TabsTrigger value="users">
               <UserPlus className="mr-2 h-4 w-4" />
@@ -194,6 +199,10 @@ export default function AdminPage() {
 
            <TabsContent value="resources" className="mt-4">
             <ResourceManager resources={resources} />
+          </TabsContent>
+          
+          <TabsContent value="manage-team" className="mt-4">
+            <FakeEmployeeManager />
           </TabsContent>
 
           <TabsContent value="analytics" className="mt-4">

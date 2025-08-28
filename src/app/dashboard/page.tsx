@@ -13,6 +13,7 @@ import type { User as FirebaseUser } from 'firebase/auth';
 import { Loader2 } from "lucide-react";
 import { collection, query, where, onSnapshot, doc, getDoc, limit, addDoc, serverTimestamp, orderBy } from "firebase/firestore";
 import type { Employee, AssignedTask, Resource, DailyLog, Announcement } from "@/lib/types";
+import { TeamActivity } from "@/components/dashboard/team-activity";
 
 async function logVisitor(employee: Employee) {
   try {
@@ -150,6 +151,9 @@ export default function DashboardPage() {
           </div>
           <div className="lg:col-span-2">
             <WeeklySummary data={dailyLogs} />
+          </div>
+          <div className="lg:col-span-4">
+            <TeamActivity />
           </div>
           <div className="lg:col-span-4">
              <Announcements announcement={announcement} />

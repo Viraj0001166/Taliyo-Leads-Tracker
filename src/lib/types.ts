@@ -67,3 +67,14 @@ export interface Announcement {
     };
     updatedBy: string;
 }
+
+export interface FakeEmployee {
+  id: string;
+  name: string;
+  email: string;
+  joinDate: {
+    seconds: number;
+    nanoseconds: number;
+  };
+  status: 'Active' | 'Training' | 'Inactive';
+}
