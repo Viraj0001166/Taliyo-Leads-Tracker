@@ -3,8 +3,9 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { signInWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
+import { auth, db } from '@/lib/firebase';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -33,16 +34,33 @@ export default function LoginPage() {
         description: `Welcome back! Redirecting you now...`,
       });
       
-      // Always redirect to the dashboard. The dashboard page will handle role-based redirection.
       router.push('/dashboard');
 
     } catch (error: any) {
-      console.error("Firebase Auth Error:", error);
-      toast({
-        variant: 'destructive',
-        title: 'Login Failed',
-        description: error.message || 'Please check your credentials and try again.',
-      });
+      // ONE-TIME TEMPORARY ADMIN CREATION
+      if (error.code === 'auth/user-not-found' && email === 'tempadmin@taliyo.com') {
+        try {
+          const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+          const user = userCredential.user;
+          await updateProfile(user, { displayName: 'Temporary Admin' });
+          await setDoc(doc(db, 'users', user.uid), {
+            name: 'Temporary Admin',
+            email: user.email,
+            role: 'admin',
+            avatar: `https://picsum.photos/seed/${user.email}/100/100`,
+          });
+          toast({ title: "Temporary Admin Created", description: "Please log in again with the same credentials." });
+        } catch (creationError: any) {
+          toast({ variant: 'destructive', title: 'Setup Failed', description: creationError.message });
+        }
+      } else {
+         console.error("Firebase Auth Error:", error);
+         toast({
+            variant: 'destructive',
+            title: 'Login Failed',
+            description: error.message || 'Please check your credentials and try again.',
+         });
+      }
     } finally {
       setLoading(false);
     }
