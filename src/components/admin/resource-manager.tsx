@@ -3,25 +3,13 @@
 
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from '@/components/ui/button';
-import { Loader2, Trash2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import type { Resource } from "@/lib/types";
 import { AddResourceForm } from './add-resource-form';
 import { db } from '@/lib/firebase';
-import { doc, deleteDoc, collection, writeBatch, getDocs } from 'firebase/firestore';
+import { collection, writeBatch, getDocs } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
 import { initialResourcesData } from '@/lib/data';
 
 interface ResourceManagerProps {
@@ -30,35 +18,12 @@ interface ResourceManagerProps {
 
 export function ResourceManager({ initialResources }: ResourceManagerProps) {
   const { toast } = useToast();
-  const [resources, setResources] = useState<Resource[]>(initialResources);
   const [isSeeding, setIsSeeding] = useState(false);
-
-  useEffect(() => {
-    setResources(initialResources);
-  }, [initialResources]);
 
   const handleResourceAdded = () => {
     // The parent component's onSnapshot listener will handle the update
   };
   
-  const handleDelete = async (resourceId: string) => {
-    try {
-      await deleteDoc(doc(db, "resources", resourceId));
-      // The onSnapshot listener will update the state automatically
-      toast({
-        title: "Resource Deleted",
-        description: "The resource has been removed successfully.",
-      });
-    } catch (error) {
-      console.error("Error deleting resource:", error);
-       toast({
-        variant: "destructive",
-        title: "Deletion Failed",
-        description: "Could not delete the resource. Please try again.",
-      });
-    }
-  };
-
   const seedInitialData = async () => {
     setIsSeeding(true);
     try {
@@ -104,72 +69,12 @@ export function ResourceManager({ initialResources }: ResourceManagerProps) {
           </CardHeader>
           <CardContent>
             <AddResourceForm onResourceAdded={handleResourceAdded} />
-          </CardContent>
-        </Card>
-      </div>
-      <div className="md:col-span-2">
-        <Card>
-          <CardHeader>
-            <div className="flex justify-between items-start">
-              <div>
-                <CardTitle>Existing Resources</CardTitle>
-                <CardDescription>A list of all currently available resources.</CardDescription>
-              </div>
-               <Button onClick={seedInitialData} disabled={isSeeding} variant="outline" size="sm">
-                {isSeeding && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Seed Initial Data
-              </Button>
+             <div className="mt-4 border-t pt-4">
+                 <Button onClick={seedInitialData} disabled={isSeeding} variant="outline" size="sm" className="w-full">
+                    {isSeeding && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Seed Initial Data
+                </Button>
             </div>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Category</TableHead>
-                  <TableHead>Title</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {resources.map((resource) => (
-                  <TableRow key={resource.id}>
-                    <TableCell className="font-medium">{resource.category}</TableCell>
-                    <TableCell>{resource.title}</TableCell>
-                    <TableCell className="text-right">
-                       <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                           <Button variant="destructive" size="icon">
-                              <Trash2 className="h-4 w-4" />
-                           </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              This action cannot be undone. This will permanently delete the resource
-                              and remove it from your employees' dashboards.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction onClick={() => handleDelete(resource.id)}>
-                              Continue
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </TableCell>
-                  </TableRow>
-                ))}
-                {resources.length === 0 && (
-                    <TableRow>
-                        <TableCell colSpan={3} className="text-center text-muted-foreground h-24">
-                            No resources found. Click "Seed Initial Data" to add default templates.
-                        </TableCell>
-                    </TableRow>
-                )}
-              </TableBody>
-            </Table>
           </CardContent>
         </Card>
       </div>
