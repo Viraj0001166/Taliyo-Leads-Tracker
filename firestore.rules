@@ -2,56 +2,96 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    
-    function isAuth() {
-      return request.auth != null;
-    }
-    
-    function isAdmin() {
-      return isAuth() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+  
+    // Helper function to check if a user is an authenticated employee
+    function isEmployee(userId) {
+      return exists(/databases/$(database)/documents/users/$(userId)) &&
+             get(/databases/$(database)/documents/users/$(userId)).data.role == 'employee';
     }
 
-    // Users can read any profile (for directory), but only update their own. Admins can do anything.
+    // Helper function to check if a user is an authenticated admin
+    function isAdmin(userId) {
+      return exists(/databases/$(database)/documents/users/$(userId)) &&
+             get(/databases/aabbs/$(database)/documents/users/$(userId)).data.role == 'admin';
+    }
+
+    // Rules for the 'users' collection
     match /users/{userId} {
-      allow read: if isAuth();
-      allow write: if isAuth() && (request.auth.uid == userId || isAdmin());
+      // Admins can read and write any user document
+      // Users can only read/update their own document
+      allow read, update: if request.auth != null && (isAdmin(request.auth.uid) || request.auth.uid == userId);
+      // Only admins can create or delete users
+      allow create, delete: if request.auth != null && isAdmin(request.auth.uid);
     }
 
-    // Employees can create their own logs. Admins can read any log. Employees can read their own.
+    // Rules for 'dailyLogs'
     match /dailyLogs/{logId} {
-      allow create: if isAuth();
-      allow read: if isAuth() && (isAdmin() || request.auth.uid == resource.data.employeeId);
-    }
-
-    // Employees can create their own visitor logs. Admins can read any log.
-    match /visitorLogs/{logId} {
-      allow create: if isAuth();
-      allow read: if isAuth() && isAdmin();
-    }
-
-    // Admins can create tasks. Employees can read/update their own tasks.
-    match /tasks/{taskId} {
-      allow read: if isAuth();
-      allow create: if isAdmin();
-      allow update: if isAuth();
-    }
-
-    // Admins can create/delete resources. All authenticated users can read them.
-    match /resources/{resourceId} {
-      allow read: if isAuth();
-      allow write, delete: if isAdmin();
+      // Only an admin or the employee who created the log can read it
+      allow read: if request.auth != null && (isAdmin(request.auth.uid) || isEmployee(request.auth.uid));
+      // Only an employee can create their own log
+      allow create: if request.auth != null && isEmployee(request.auth.uid) && request.resource.data.employeeId == request.auth.uid;
+      // Logs cannot be updated or deleted
+      allow update, delete: if false;
     }
     
-    // Admins can write announcements. All authenticated users can read them.
+    // Rules for 'tasks'
+    match /tasks/{taskId} {
+      // Admins can read all tasks
+      allow read: if request.auth != null && isAdmin(request.auth.uid);
+      // Employees can read and update tasks assigned to them
+      allow read, update: if request.auth != null && isEmployee(request.auth.uid) && get(/databases/$(database)/documents/tasks/$(taskId)).data.employeeId == request.auth.uid;
+      // Only admins can create tasks
+      allow create: if request.auth != null && isAdmin(request.auth.uid);
+      // Tasks cannot be deleted
+      allow delete: if false;
+    }
+    
+    // Rules for 'resources'
+    match /resources/{resourceId} {
+        // Any authenticated user can read resources
+        allow read: if request.auth != null;
+        // Only admins can create, update, or delete resources
+        allow write: if request.auth != null && isAdmin(request.auth.uid);
+    }
+    
+    // Rules for 'visitorLogs'
+    match /visitorLogs/{logId} {
+      // Only Admins can read visitor logs
+      allow read: if request.auth != null && isAdmin(request.auth.uid);
+      // Employees can only create their own visitor log entry
+      allow create: if request.auth != null && isEmployee(request.auth.uid) && request.resource.data.employeeId == request.auth.uid;
+       // Logs cannot be updated or deleted
+      allow update, delete: if false;
+    }
+    
+     // Rules for 'announcements'
     match /announcements/{announcementId} {
-        allow read: if isAuth();
-        allow write: if isAdmin();
+      // Any authenticated user can read the latest announcement
+      allow read: if request.auth != null;
+      // Only admins can update the announcement
+      allow write: if request.auth != null && isAdmin(request.auth.uid);
+    }
+    
+    // Rules for 'fakeEmployees'
+    match /fakeEmployees/{employeeId} {
+        // Any authenticated user can read the fake employee list
+        allow read: if request.auth != null;
+        // Only admins can create, update, or delete fake employees
+        allow write: if request.auth != null && isAdmin(request.auth.uid);
+    }
+    
+    // Rules for 'taskFields' - for dynamic form fields
+    match /taskFields/{fieldId} {
+        // Any authenticated user can read the form fields to build the UI
+        allow read: if request.auth != null;
+        // Only admins can create, update, or delete fields
+        allow write: if request.auth != null && isAdmin(request.auth.uid);
     }
 
-    // Admins can manage fake employees. All authenticated users can read them.
-    match /fakeEmployees/{employeeId} {
-        allow read: if isAuth();
-        allow write, delete: if isAdmin();
+    // Rules for 'config' - for app settings like webhook URLs
+    match /config/{configId} {
+      // Only admins can read and write to the config
+      allow read, write: if request.auth != null && isAdmin(request.auth.uid);
     }
   }
 }
