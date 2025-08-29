@@ -1,102 +1,92 @@
-
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper function to check if a user is an admin
-    function isAdmin() {
-      return exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
-    }
-
-    // Helper function to check if a user is an employee
-    function isEmployee() {
-      return exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'employee';
-    }
-
-    // Helper function to check if a user is authenticated
-    function isAuthenticated() {
+    // Helper functions to check user roles
+    function isAuth() {
       return request.auth != null;
     }
-    
-    // USERS Collection
-    // Admins can read/write all user data.
-    // Authenticated users can read their own data and update their own name.
-    // Employees can read other employees' data for the directory.
+
+    function isEmployee() {
+      return isAuth() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'employee';
+    }
+
+    function isAdmin() {
+      return isAuth() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // Users collection:
+    // - Admins can read/write any user.
+    // - Authenticated users can read their own data.
     match /users/{userId} {
-      allow read: if isAdmin() || request.auth.uid == userId || isEmployee();
-      allow create: if isAdmin();
-      allow update: if isAdmin() || (request.auth.uid == userId && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name']));
-      allow delete: if isAdmin();
-    }
-
-    // DAILY LOGS Collection
-    // Employees can create their own logs.
-    // Admins can read all logs.
-    match /dailyLogs/{logId} {
-      allow read: if isAdmin();
-      allow create: if isEmployee() && request.resource.data.employeeId == request.auth.uid;
-      allow update, delete: if false; // Logs should be immutable
-    }
-
-    // TASKS Collection
-    // Admins can create/delete tasks.
-    // Employees can read tasks assigned to them and update the isCompleted status.
-    match /tasks/{taskId} {
-      allow read: if isAdmin() || (isEmployee() && resource.data.employeeId == request.auth.uid);
-      allow create, delete: if isAdmin();
-      allow update: if isEmployee() && resource.data.employeeId == request.auth.uid && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isCompleted']);
-    }
-
-    // RESOURCES Collection
-    // Admins can manage all resources.
-    // Authenticated users can read resources.
-    match /resources/{resourceId} {
-        allow read: if isAuthenticated();
-        allow create, update, delete: if isAdmin();
-    }
-
-    // ANNOUNCEMENTS Collection
-    // Only one document: 'latest'.
-    // Admins can update it, authenticated users can read it.
-    match /announcements/latest {
-      allow read: if isAuthenticated();
+      allow read: if isAuth() && (isAdmin() || request.auth.uid == userId);
       allow write: if isAdmin();
     }
 
-    // VISITOR LOGS Collection
-    // Admins can read all logs.
-    // Employees can create their own logs.
+    // Daily Logs:
+    // - Employees can create logs for themselves.
+    // - Admins can read all logs.
+    match /dailyLogs/{logId} {
+      allow read: if isAdmin();
+      allow create: if isEmployee() && request.resource.data.employeeId == request.auth.uid;
+      allow update, delete: if false; // Logs are immutable
+    }
+
+    // Tasks:
+    // - Admins can manage all tasks.
+    // - Employees can read/update tasks assigned to them.
+    match /tasks/{taskId} {
+      allow read, update: if isAuth() && (isAdmin() || get(/databases/$(database)/documents/tasks/$(taskId)).data.employeeId == request.auth.uid);
+      allow create, delete: if isAdmin();
+    }
+    
+    // Resources:
+    // - Admins can manage all resources.
+    // - All authenticated users can read them.
+    match /resources/{resourceId} {
+      allow read: if isAuth();
+      allow write: if isAdmin();
+    }
+    
+    // Announcements:
+    // - Admins can manage the 'latest' announcement.
+    // - All authenticated users can read it.
+    match /announcements/latest {
+        allow read: if isAuth();
+        allow write: if isAdmin();
+    }
+
+    // Visitor Logs:
+    // - Admins can read all logs.
+    // - Employees can create them.
     match /visitorLogs/{logId} {
       allow read: if isAdmin();
       allow create: if isEmployee() && request.resource.data.employeeId == request.auth.uid;
       allow update, delete: if false;
     }
 
-    // FAKE EMPLOYEES Collection
-    // Admins can manage fake employees.
-    // Authenticated users (employees on dashboard) can read them.
+    // Fake Employees for team directory:
+    // - Admins can manage them.
+    // - All authenticated users can read them.
     match /fakeEmployees/{employeeId} {
-        allow read: if isAuthenticated();
-        allow create, update, delete: if isAdmin();
-    }
-
-    // CONFIG Collection (for Webhook URL)
-    // Admins can write to it.
-    // All authenticated users can read it (needed by client to send data).
-    match /config/{docId} {
-      allow read: if isAuthenticated();
+      allow read: if isAuth();
       allow write: if isAdmin();
     }
-    
-    // TASK FIELDS Collection (for Dynamic Form)
-    // Admins can manage fields.
-    // All authenticated users can read them to build the form.
+
+    // App Configuration (Webhook URL)
+    // - Admins can manage it.
+    // - All authenticated users can read it for form submissions.
+    match /config/googleSheetWebhookUrl {
+      allow read: if isAuth();
+      allow write: if isAdmin();
+    }
+
+    // Task Fields for dynamic form
+    // - Admins can manage them.
+    // - All authenticated users can read them to build the form.
     match /taskFields/{fieldId} {
-        allow read: if isAuthenticated();
-        allow create, update, delete: if isAdmin();
+      allow read: if isAuth();
+      allow write: if isAdmin();
     }
   }
 }
