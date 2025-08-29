@@ -83,12 +83,12 @@ export default function EmployeeLoginPage() {
   }
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center bg-background p-8">
+    <main className="flex min-h-screen flex-col items-center justify-center bg-background p-4 md:p-8">
       <div className="flex flex-col items-center justify-center text-center mb-8">
-        <div className="p-3 rounded-full bg-primary/10 border border-primary/20 mb-2">
-            <User className="h-8 w-8 text-primary" />
+        <div className="p-3 rounded-full bg-primary/10 border border-primary/20 mb-4">
+            <User className="h-10 w-10 text-primary" />
         </div>
-        <h1 className="text-3xl font-bold text-foreground tracking-tighter">Employee Portal</h1>
+        <h1 className="text-4xl font-bold text-foreground tracking-tighter">Employee Portal</h1>
         <p className="text-muted-foreground mt-2 max-w-md">Log your daily tasks and track your performance.</p>
       </div>
 
