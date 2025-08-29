@@ -4,7 +4,7 @@ import { PageHeader } from "@/components/common/page-header";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EmployeePerformance } from "@/components/admin/employee-performance";
 import { Leaderboard } from "@/components/admin/leaderboard";
-import { TaskAssignmentForm } from "@/components/admin/task-assignment-form";
+import { RecurringTaskForm } from "@/components/admin/recurring-task-form";
 import { BroadcastForm } from "@/components/admin/broadcast-form";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, Trophy, ClipboardEdit, Loader2, UserPlus, BookCopy, BarChart4, Briefcase, Settings } from "lucide-react";
@@ -181,11 +181,11 @@ export default function AdminPage() {
                 <CardHeader>
                   <CardTitle>Assign a New Task</CardTitle>
                   <CardDescription>
-                    Assign a specific task to an individual employee.
+                    Assign a specific or recurring task to an individual employee.
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <TaskAssignmentForm employees={employees} />
+                  <RecurringTaskForm employees={employees} />
                 </CardContent>
               </Card>
               <Card>

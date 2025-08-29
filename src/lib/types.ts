@@ -1,4 +1,5 @@
 
+import { Timestamp } from "firebase/firestore";
 
 export interface Employee {
   id: string; // This will be the Firebase Auth UID
@@ -23,10 +24,7 @@ export interface AssignedTask {
   task: string;
   assignedBy: string;
   isCompleted: boolean;
-  assignedAt: {
-      seconds: number,
-      nanoseconds: number
-  };
+  assignedAt: Timestamp | Date;
 }
 
 export interface Resource {

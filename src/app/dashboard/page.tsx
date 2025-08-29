@@ -11,7 +11,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import type { User as FirebaseUser } from 'firebase/auth';
 import { Loader2 } from "lucide-react";
-import { collection, query, where, onSnapshot, doc, getDoc, limit, addDoc, serverTimestamp, orderBy } from "firebase/firestore";
+import { collection, query, where, onSnapshot, doc, getDoc, limit, addDoc, serverTimestamp, orderBy, Timestamp } from "firebase/firestore";
 import type { Employee, AssignedTask, Resource, DailyLog, Announcement } from "@/lib/types";
 import { TeamActivity } from "@/components/dashboard/team-activity";
 
@@ -87,10 +87,22 @@ export default function DashboardPage() {
 
     // Set up real-time listeners for employee-specific data
     const tasksCollection = collection(db, "tasks");
-    const tasksQuery = query(tasksCollection, where("employeeId", "==", employeeData.id));
+    const tasksQuery = query(
+        tasksCollection, 
+        where("employeeId", "==", employeeData.id)
+    );
     const unsubscribeTasks = onSnapshot(tasksQuery, (snapshot) => {
-        setAssignedTasks(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AssignedTask)));
+        setAssignedTasks(snapshot.docs.map(doc => {
+            const data = doc.data();
+            // Firestore timestamps need to be converted correctly
+            return { 
+                id: doc.id, 
+                ...data,
+                assignedAt: data.assignedAt instanceof Timestamp ? data.assignedAt.toDate() : new Date(data.assignedAt)
+            } as AssignedTask
+        }));
     });
+
 
     const logsCollection = collection(db, "dailyLogs");
     const logsQuery = query(

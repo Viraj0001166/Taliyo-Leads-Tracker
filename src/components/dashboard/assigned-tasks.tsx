@@ -7,22 +7,27 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import type { AssignedTask } from "@/lib/types";
 import { db } from '@/lib/firebase';
-import { doc, updateDoc } from 'firebase/firestore';
+import { doc, updateDoc, Timestamp } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
+import { format, isToday, isYesterday } from 'date-fns';
 
 interface AssignedTasksProps {
   tasks: AssignedTask[];
 }
 
+const formatDate = (date: Date | Timestamp) => {
+    const d = date instanceof Timestamp ? date.toDate() : date;
+    if (isToday(d)) return 'Today';
+    if (isYesterday(d)) return 'Yesterday';
+    return format(d, 'MMM dd');
+};
+
+
 export function AssignedTasks({ tasks }: AssignedTasksProps) {
   const { toast } = useToast();
-  const [taskStatus, setTaskStatus] = React.useState<Record<string, boolean>>(
-    tasks.reduce((acc, task) => ({ ...acc, [task.id]: task.isCompleted }), {})
-  );
-
-  const handleCheckedChange = async (taskId: string) => {
-    const newStatus = !taskStatus[taskId];
-    setTaskStatus(prev => ({ ...prev, [taskId]: newStatus }));
+  
+  const handleCheckedChange = async (taskId: string, currentStatus: boolean) => {
+    const newStatus = !currentStatus;
 
     try {
       const taskDocRef = doc(db, "tasks", taskId);
@@ -35,8 +40,6 @@ export function AssignedTasks({ tasks }: AssignedTasksProps) {
       });
     } catch (error) {
       console.error("Error updating task status:", error);
-      // Revert UI change on error
-      setTaskStatus(prev => ({ ...prev, [taskId]: !newStatus }));
       toast({
         variant: "destructive",
         title: "Update Failed",
@@ -45,6 +48,14 @@ export function AssignedTasks({ tasks }: AssignedTasksProps) {
     }
   };
 
+  const sortedTasks = React.useMemo(() => {
+    return tasks.sort((a, b) => {
+        const dateA = a.assignedAt instanceof Timestamp ? a.assignedAt.toMillis() : new Date(a.assignedAt).getTime();
+        const dateB = b.assignedAt instanceof Timestamp ? b.assignedAt.toMillis() : new Date(b.assignedAt).getTime();
+        return dateB - dateA;
+    });
+  }, [tasks]);
+
   return (
     <Card className="h-full">
       <CardHeader>
@@ -52,24 +63,26 @@ export function AssignedTasks({ tasks }: AssignedTasksProps) {
         <CardDescription>Tasks assigned to you by your admin.</CardDescription>
       </CardHeader>
       <CardContent>
-        {tasks.length > 0 ? (
+        {sortedTasks.length > 0 ? (
           <ul className="space-y-4">
-            {tasks.map((task) => (
+            {sortedTasks.map((task) => (
               <li key={task.id} className="flex items-start space-x-3">
                 <Checkbox
                   id={`task-${task.id}`}
-                  checked={taskStatus[task.id]}
-                  onCheckedChange={() => handleCheckedChange(task.id)}
+                  checked={task.isCompleted}
+                  onCheckedChange={() => handleCheckedChange(task.id, task.isCompleted)}
                   className="mt-1"
                 />
                 <div className="grid gap-1.5 leading-none">
                   <Label
                     htmlFor={`task-${task.id}`}
-                    className={`font-medium ${taskStatus[task.id] ? 'line-through text-muted-foreground' : ''}`}
+                    className={`font-medium ${task.isCompleted ? 'line-through text-muted-foreground' : ''}`}
                   >
                     {task.task}
                   </Label>
-                  <p className="text-sm text-muted-foreground">Assigned by {task.assignedBy}</p>
+                  <p className="text-sm text-muted-foreground">
+                      For: {formatDate(task.assignedAt)} • By: {task.assignedBy}
+                  </p>
                 </div>
               </li>
             ))}
