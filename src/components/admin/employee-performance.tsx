@@ -1,12 +1,13 @@
 
+
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import type { Employee, DailyLog } from "@/lib/types";
+import type { Employee, DailyLog, TaskField } from "@/lib/types";
 import { AIPerformanceAnalyzer } from "./ai-performance-analyzer";
 import { useEffect, useState } from "react";
-import { collection, query, where, getDocs, orderBy, limit } from "firebase/firestore";
+import { collection, query, where, getDocs, orderBy, limit, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
 interface EmployeePerformanceProps {
@@ -15,15 +16,22 @@ interface EmployeePerformanceProps {
 
 interface PerformanceMetrics {
   [employeeId: string]: {
-    connections: number;
-    followUps: number;
-    emails: number;
-    leads: number;
+    [key: string]: number | string;
   };
 }
 
 export function EmployeePerformance({ employees }: EmployeePerformanceProps) {
   const [metrics, setMetrics] = useState<PerformanceMetrics>({});
+  const [taskFields, setTaskFields] = useState<TaskField[]>([]);
+
+  useEffect(() => {
+    const q = collection(db, 'taskFields');
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+        const fields = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TaskField));
+        setTaskFields(fields);
+    });
+    return () => unsubscribe();
+  }, []);
 
   useEffect(() => {
     const fetchMetrics = async () => {
@@ -39,14 +47,9 @@ export function EmployeePerformance({ employees }: EmployeePerformanceProps) {
         const logSnapshot = await getDocs(q);
         if (!logSnapshot.empty) {
           const lastLog = logSnapshot.docs[0].data() as DailyLog;
-          newMetrics[employee.id] = {
-            connections: lastLog.linkedinConnections,
-            followUps: lastLog.followUps,
-            emails: lastLog.coldEmails,
-            leads: lastLog.leadsGenerated,
-          };
+          newMetrics[employee.id] = lastLog;
         } else {
-          newMetrics[employee.id] = { connections: 0, followUps: 0, emails: 0, leads: 0 };
+          newMetrics[employee.id] = {};
         }
       }
       setMetrics(newMetrics);
@@ -68,12 +71,11 @@ export function EmployeePerformance({ employees }: EmployeePerformanceProps) {
             <Table>
             <TableHeader>
                 <TableRow>
-                <TableHead>Employee</TableHead>
-                <TableHead className="text-center">Connections</TableHead>
-                <TableHead className="text-center">Follow-ups</TableHead>
-                <TableHead className="text-center">Emails Sent</TableHead>
-                <TableHead className="text-center">Leads</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                    <TableHead>Employee</TableHead>
+                    {taskFields.map(field => (
+                        <TableHead key={field.id} className="text-center">{field.label}</TableHead>
+                    ))}
+                    <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
             </TableHeader>
             <TableBody>
@@ -91,14 +93,11 @@ export function EmployeePerformance({ employees }: EmployeePerformanceProps) {
                         </div>
                     </div>
                     </TableCell>
-                    <TableCell className="text-center font-medium">{metrics[employee.id]?.connections ?? 'N/A'}</TableCell>
-                    <TableCell className="text-center font-medium">{metrics[employee.id]?.followUps ?? 'N/A'}</TableCell>
-                    <TableCell className="text-center font-medium">{metrics[employee.id]?.emails ?? 'N/A'}</TableCell>
-                    <TableCell className="text-center">
-                    <Badge variant={ (metrics[employee.id]?.leads ?? 0) > 0 ? "default" : "secondary"}>
-                        {metrics[employee.id]?.leads ?? 'N/A'}
-                    </Badge>
-                    </TableCell>
+                    {taskFields.map(field => (
+                        <TableCell key={field.id} className="text-center font-medium">
+                            {metrics[employee.id]?.[field.name] ?? 'N/A'}
+                        </TableCell>
+                    ))}
                     <TableCell className="text-right">
                     <AIPerformanceAnalyzer employee={employee} />
                     </TableCell>

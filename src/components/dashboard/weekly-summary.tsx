@@ -1,3 +1,4 @@
+
 "use client"
 
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts"
@@ -15,35 +16,56 @@ import {
   ChartLegend,
   ChartLegendContent,
 } from "@/components/ui/chart"
-import type { DailyLog } from "@/lib/types"
-import { format, parseISO } from "date-fns"
-
-const chartConfig = {
-  linkedinConnections: {
-    label: "LinkedIn",
-    color: "hsl(var(--chart-1))",
-  },
-  coldEmails: {
-    label: "Emails",
-    color: "hsl(var(--chart-2))",
-  },
-  leadsGenerated: {
-    label: "Leads",
-    color: "hsl(var(--chart-3))",
-  },
-}
+import type { DailyLog, TaskField } from "@/lib/types"
+import { format } from "date-fns"
+import { useMemo, useState, useEffect } from "react"
+import { collection, onSnapshot } from "firebase/firestore"
+import { db } from "@/lib/firebase"
 
 interface WeeklySummaryProps {
   data: DailyLog[]
 }
 
+const chartColors = [
+    'hsl(var(--chart-1))',
+    'hsl(var(--chart-2))',
+    'hsl(var(--chart-3))',
+    'hsl(var(--chart-4))',
+    'hsl(var(--chart-5))',
+];
+
 export function WeeklySummary({ data }: WeeklySummaryProps) {
-    const chartData = data.map(log => ({
-        date: format(new Date(log.date), 'EEE'),
-        linkedinConnections: log.linkedinConnections,
-        coldEmails: log.coldEmails,
-        leadsGenerated: log.leadsGenerated,
-    }));
+    const [taskFields, setTaskFields] = useState<TaskField[]>([]);
+
+    useEffect(() => {
+        const q = collection(db, 'taskFields');
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+          const fields = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TaskField));
+          setTaskFields(fields);
+        });
+        return () => unsubscribe();
+      }, []);
+
+    const { chartData, chartConfig } = useMemo(() => {
+        const config = taskFields.reduce((acc, field, index) => {
+            acc[field.name] = {
+                label: field.label,
+                color: chartColors[index % chartColors.length],
+            };
+            return acc;
+        }, {} as any);
+
+        const aData = data.map(log => {
+            const dayData: {[key: string]: any} = {
+                date: format(new Date(log.date), 'EEE'),
+            };
+            taskFields.forEach(field => {
+                dayData[field.name] = log[field.name] || 0;
+            });
+            return dayData;
+        });
+        return { chartData: aData, chartConfig: config };
+    }, [data, taskFields]);
 
   return (
     <Card className="h-full flex flex-col">
@@ -66,9 +88,9 @@ export function WeeklySummary({ data }: WeeklySummaryProps) {
               content={<ChartTooltipContent />}
             />
             <ChartLegend content={<ChartLegendContent />} />
-            <Bar dataKey="linkedinConnections" fill="var(--color-linkedinConnections)" radius={4} />
-            <Bar dataKey="coldEmails" fill="var(--color-coldEmails)" radius={4} />
-            <Bar dataKey="leadsGenerated" fill="var(--color-leadsGenerated)" radius={4} />
+            {Object.keys(chartConfig).map(key => (
+                 <Bar key={key} dataKey={key} fill={`var(--color-${key})`} radius={4} />
+            ))}
           </BarChart>
         </ChartContainer>
       </CardContent>

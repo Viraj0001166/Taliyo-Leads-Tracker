@@ -1,4 +1,5 @@
 
+
 export interface Employee {
   id: string; // This will be the Firebase Auth UID
   name: string;
@@ -11,11 +12,9 @@ export interface DailyLog {
   id: string;
   employeeId: string;
   date: string; 
-  linkedinConnections: number;
-  followUps: number;
-  coldEmails: number;
-  leadsGenerated: number;
   notes?: string;
+  // All other fields are dynamic
+  [key: string]: any;
 }
 
 export interface AssignedTask {
@@ -77,4 +76,16 @@ export interface FakeEmployee {
     nanoseconds: number;
   };
   status: 'Active' | 'Training' | 'Inactive';
+}
+
+export interface TaskField {
+  id: string;
+  label: string;
+  placeholder: string;
+  name: string; // e.g. "linkedinConnections"
+}
+
+export interface AppConfig {
+    id: 'googleSheetWebhookUrl';
+    url: string;
 }

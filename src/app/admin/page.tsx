@@ -7,7 +7,7 @@ import { Leaderboard } from "@/components/admin/leaderboard";
 import { TaskAssignmentForm } from "@/components/admin/task-assignment-form";
 import { BroadcastForm } from "@/components/admin/broadcast-form";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, Trophy, ClipboardEdit, Loader2, UserPlus, BookCopy, BarChart4, Briefcase } from "lucide-react";
+import { Users, Trophy, ClipboardEdit, Loader2, UserPlus, BookCopy, BarChart4, Briefcase, Settings } from "lucide-react";
 import { auth, db } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, useCallback } from 'react';
@@ -18,6 +18,7 @@ import type { Employee, PerformanceData, Resource } from "@/lib/types";
 import { ResourceManager } from "@/components/admin/resource-manager";
 import { VisitorAnalytics } from "@/components/admin/visitor-analytics";
 import { FakeEmployeeManager } from "@/components/admin/fake-employee-manager";
+import { AppSettings } from "@/components/admin/app-settings";
 
 export default function AdminPage() {
   const router = useRouter();
@@ -110,7 +111,7 @@ export default function AdminPage() {
       <PageHeader title="Admin Panel" user={currentUser} />
       <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
         <Tabs defaultValue="performance" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 md:grid-cols-7 h-auto">
+          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 md:grid-cols-8 h-auto">
             <TabsTrigger value="performance" className="flex-wrap">
               <Users className="mr-2 h-4 w-4" />
               Employee Performance
@@ -138,6 +139,10 @@ export default function AdminPage() {
             <TabsTrigger value="analytics">
               <BarChart4 className="mr-2 h-4 w-4" />
               Visitor Analytics
+            </TabsTrigger>
+             <TabsTrigger value="settings">
+              <Settings className="mr-2 h-4 w-4" />
+              App Settings
             </TabsTrigger>
           </TabsList>
           
@@ -207,6 +212,10 @@ export default function AdminPage() {
 
           <TabsContent value="analytics" className="mt-4">
             <VisitorAnalytics />
+          </TabsContent>
+
+          <TabsContent value="settings" className="mt-4">
+            <AppSettings />
           </TabsContent>
         </Tabs>
       </main>
