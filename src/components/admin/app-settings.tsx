@@ -9,10 +9,10 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from 'zod';
 import { db } from "@/lib/firebase";
-import { doc, setDoc, getDoc, collection, onSnapshot, addDoc, deleteDoc } from "firebase/firestore";
+import { doc, setDoc, getDoc, collection, onSnapshot, addDoc, deleteDoc, updateDoc } from "firebase/firestore";
 import { useEffect, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Save, PlusCircle, Trash2 } from "lucide-react";
+import { Loader2, Save, PlusCircle, Trash2, Edit } from "lucide-react";
 import type { AppConfig, TaskField } from "@/lib/types";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../ui/table";
 
@@ -32,6 +32,7 @@ export function AppSettings() {
   const [isSubmittingField, setIsSubmittingField] = useState(false);
   const [taskFields, setTaskFields] = useState<TaskField[]>([]);
   const [loadingFields, setLoadingFields] = useState(true);
+  const [editingField, setEditingField] = useState<TaskField | null>(null);
 
   const webhookForm = useForm<z.infer<typeof webhookFormSchema>>({
     resolver: zodResolver(webhookFormSchema),
@@ -63,6 +64,17 @@ export function AppSettings() {
     return () => unsubscribe();
   }, [webhookForm]);
 
+  useEffect(() => {
+    if (editingField) {
+      taskFieldForm.reset({
+        label: editingField.label,
+        placeholder: editingField.placeholder,
+      });
+    } else {
+      taskFieldForm.reset({ label: "", placeholder: "" });
+    }
+  }, [editingField, taskFieldForm]);
+
   const onWebhookSubmit = async (values: z.infer<typeof webhookFormSchema>) => {
     setIsSubmittingWebhook(true);
     try {
@@ -79,17 +91,27 @@ export function AppSettings() {
   const onTaskFieldSubmit = async (values: z.infer<typeof taskFieldFormSchema>) => {
     setIsSubmittingField(true);
     try {
-      // Create a URL-friendly name from the label, e.g., "LinkedIn Connections" -> "linkedinConnections"
-      const name = values.label.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
-      const finalName = name.replace(/-(\w)/g, (match, letter) => letter.toUpperCase());
+      if (editingField) {
+        const docRef = doc(db, 'taskFields', editingField.id);
+        await updateDoc(docRef, {
+            label: values.label,
+            placeholder: values.placeholder,
+        });
+        toast({ title: "Field Updated", description: `The field "${values.label}" has been updated.`});
+        setEditingField(null);
+      } else {
+        const name = values.label.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+        const finalName = name.replace(/-(\w)/g, (_, letter) => letter.toUpperCase());
 
-      await addDoc(collection(db, "taskFields"), {
-          label: values.label,
-          placeholder: values.placeholder,
-          name: finalName,
-      });
-      toast({ title: "Field Added", description: `The field "${values.label}" has been added to the daily log form.` });
-      taskFieldForm.reset();
+        await addDoc(collection(db, "taskFields"), {
+            label: values.label,
+            placeholder: values.placeholder,
+            name: finalName,
+        });
+        toast({ title: "Field Added", description: `The field "${values.label}" has been added to the daily log form.` });
+      }
+      taskFieldForm.reset({ label: '', placeholder: ''});
+
     } catch (error: any) {
        toast({ variant: "destructive", title: "Error", description: error.message });
     } finally {
@@ -106,6 +128,15 @@ export function AppSettings() {
     }
   }
 
+  const startEditField = (field: TaskField) => {
+    setEditingField(field);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  const cancelEdit = () => {
+    setEditingField(null);
+    taskFieldForm.reset({ label: '', placeholder: ''});
+  }
 
   return (
     <div className="grid gap-6 md:grid-cols-2">
@@ -142,42 +173,50 @@ export function AppSettings() {
       <div className="space-y-6">
         <Card>
             <CardHeader>
-                <CardTitle>Manage Daily Log Form Fields</CardTitle>
-                <CardDescription>Add or remove fields from the employee daily log form.</CardDescription>
+                <CardTitle>{editingField ? 'Edit Field' : 'Manage Daily Log Form Fields'}</CardTitle>
+                <CardDescription>
+                    {editingField ? `Editing the "${editingField.label}" field.` : 'Add or remove fields from the employee daily log form.'}
+                </CardDescription>
             </CardHeader>
             <CardContent>
                 <Form {...taskFieldForm}>
-                    <form onSubmit={taskFieldForm.handleSubmit(onTaskFieldSubmit)} className="flex items-end gap-4">
-                       <FormField
-                        control={taskFieldForm.control}
-                        name="label"
-                        render={({ field }) => (
-                          <FormItem className="flex-1">
-                            <FormLabel>Field Label</FormLabel>
-                            <FormControl>
-                              <Input placeholder="e.g. LinkedIn Connections" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
+                    <form onSubmit={taskFieldForm.handleSubmit(onTaskFieldSubmit)} className="space-y-4">
+                        <div className="flex items-end gap-4">
+                          <FormField
+                            control={taskFieldForm.control}
+                            name="label"
+                            render={({ field }) => (
+                              <FormItem className="flex-1">
+                                <FormLabel>Field Label</FormLabel>
+                                <FormControl>
+                                  <Input placeholder="e.g. LinkedIn Connections" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={taskFieldForm.control}
+                            name="placeholder"
+                            render={({ field }) => (
+                              <FormItem className="flex-1">
+                                <FormLabel>Placeholder</FormLabel>
+                                <FormControl>
+                                  <Input placeholder="e.g. 50" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <Button type="submit" disabled={isSubmittingField} size="icon" aria-label={editingField ? "Save Changes" : "Add Field"}>
+                            {isSubmittingField ? <Loader2 className="animate-spin" /> : (editingField ? <Save /> : <PlusCircle />)}
+                          </Button>
+                        </div>
+                        {editingField && (
+                            <Button type="button" variant="outline" onClick={cancelEdit} className="w-full">
+                                Cancel Edit
+                            </Button>
                         )}
-                      />
-                       <FormField
-                        control={taskFieldForm.control}
-                        name="placeholder"
-                        render={({ field }) => (
-                          <FormItem className="flex-1">
-                            <FormLabel>Placeholder</FormLabel>
-                            <FormControl>
-                              <Input placeholder="e.g. 50" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <Button type="submit" disabled={isSubmittingField}>
-                        {isSubmittingField ? <Loader2 className="animate-spin" /> : <PlusCircle />}
-                        <span className="sr-only">Add Field</span>
-                      </Button>
                     </form>
                 </Form>
 
@@ -203,6 +242,9 @@ export function AppSettings() {
                                         <TableCell>{field.label}</TableCell>
                                         <TableCell>{field.placeholder}</TableCell>
                                         <TableCell className="text-right">
+                                            <Button variant="ghost" size="icon" onClick={() => startEditField(field)}>
+                                                <Edit className="h-4 w-4" />
+                                            </Button>
                                             <Button variant="ghost" size="icon" onClick={() => handleDeleteField(field.id)}>
                                                 <Trash2 className="h-4 w-4 text-destructive" />
                                             </Button>
